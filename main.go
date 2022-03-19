@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
+	"math"
+	"math/rand"
 )
 
 var (
@@ -19,16 +20,13 @@ func counterClockwise(dir int) int {
 	return (dir+6)%8 + 1
 }
 
-func move(pixel image.Point, img image.Image, dir int) image.Point {
+func move(pixel image.Point, img *SuzukiImage, dir int) image.Point {
 	newP := pixel.Add(dirDelta[dir])
-	r := img.Bounds()
-	width := r.Dx()
-	height := r.Dy()
+	width := img.Width
+	height := img.Height
 
 	if (0 < newP.Y && newP.Y <= height) && (0 < newP.X && newP.X <= width) {
-
-		// TODO(kpfaulkner) change to byte array instead of image.
-		if img.At(newP.X, newP.Y) != color.Black {
+		if img.Get(newP) != 0 {
 			return newP
 		}
 	}
@@ -49,7 +47,7 @@ func fromTo(from image.Point, to image.Point) int {
 	panic("BOOOOOOM cant figure out direction")
 }
 
-func detectMove(img image.Image, p0 image.Point, p2 image.Point, nbd int, border []image.Point, done []bool) {
+func detectMove(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, border []image.Point, done []bool) {
 	dir := fromTo(p0, p2)
 	moved := clockwise(dir)
 	p1 := image.Point{0, 0}
@@ -84,10 +82,63 @@ func detectMove(img image.Image, p0 image.Point, p2 image.Point, nbd int, border
 		}
 		border = append(border, p3)
 		if p3.Y == 1234 || done[2] {    // TODO(kpfaulkner) NFI about original code... size(image,1) ??
-			img.
+			img.Set(p3, -1*nbd)
+		} else if img.Get(p3) == 1 {
+			img.Set(p3, nbd)
 		}
 
+		if p4 == p0 && p3 == p1 {
+			break
+		}
+
+		[2 = p3
+		p3 = p4]
 	}
+}
+
+func findContours(img *SuzukiImage) []image.Point{
+	nbd := 1
+	contourList := []image.Point{}
+	done := []bool{false,false,false,false,false,false,false,false}
+
+	height := img.Height
+	width := img.Width
+
+	for i:=0; i< height; i++ {
+		lnbd := 1
+		for j:=0; j<width;j++ {
+			fji := img.GetXY(j,i)
+			isOuter := img.GetXY(j,i) ==1 && (j==0 || img.GetXY(j-1,i) == 0)
+			isHole := img.GetXY(j,i) >= 1 && (j == width || img.GetXY(j+1,i) == 0)
+			if isOuter || isHole {
+				border := []image.Point{}
+				from := image.Point{j,i}
+				if isOuter {
+					nbd++
+					from = from.Sub(image.Point{1,0})
+				} else {
+					nbd++
+					if fji > 1 {
+						lnbd = fji
+					}
+					from.Add(image.Point{1,0})
+				}
+
+				p0 := image.Point{j,i}
+				detectMove(img, p0, from, nbd, border, done)
+				if len(border) == 0 {
+					border = append(border, p0)
+					img.Set(p0, -1 * nbd)
+				}
+				contourList = append(contourList, border...)   // TODO(kpfaulkner) check this!
+			}
+			if fji != 0 && fji != 1 {
+				lnbd = int(math.Abs(float64(fji)))
+			}
+		}
+	}
+
+	return contourList
 }
 
 func main() {
