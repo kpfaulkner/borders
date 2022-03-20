@@ -5,14 +5,19 @@ import (
 	"image"
 )
 
-func findClockwise(borders *SuzukiImage, centre []image.Point,, i2j2 []image.Point) (image.Point, bool) {
+func rotateSliceLeft(s []int, v int ) []int {
+	rotation := v % len(s)
+	newS := append(s[rotation:], s[:rotation]...)
+	return newS
+}
+
+func findClockwise(borders *SuzukiImage, centre image.Point,, i2j2 image.Point) (image.Point, bool) {
 	mask := [][]bool{{true, true, true}, {true, false, true}, {true, true, true}}
-	_ = mask
 
 	return image.Point{}, true
 }
 
-func findCounterClockwise(borders *SuzukiImage, centre []image.Point,, i2j2 []image.Point) (image.Point, bool) {
+func findCounterClockwise(borders *SuzukiImage, centre image.Point,, i2j2 image.Point) (image.Point, bool) {
 
 	return image.Point{}, false
 }
@@ -30,12 +35,12 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 				if borders.GetXY(j, i) == 1 && borders.GetXY(j-1, i) == 0 {
 					nbd++
 					i2j2 := image.Point{j - 1, i}
-					i1j1, found := findClockwise(borders, []image.Point{{j, i}}, []image.Point{i2j2})
+					i1j1, found := findClockwise(borders, image.Point{j, i}, i2j2)
 					if found {
 						i2j2 = i1j1
 						i3j3 := image.Point{j, i}
 						for {
-							i4j4, nextPixelFound := findCounterClockwise(borders, []image.Point{{j, i}}, []image.Point{i2j2})
+							i4j4, nextPixelFound := findCounterClockwise(borders, image.Point{j, i}, i2j2)
 							if nextPixelFound {
 								borders.Set(i3j3, -1*nbd)
 							}
@@ -58,12 +63,12 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 					if borders.GetXY(j, i) >= 1 && borders.GetXY(j+1, i) == 0 {
 						nbd++
 						i2j2 := image.Point{j + 1, i}
-						i1j1, found := findClockwise(borders, []image.Point{{j, i}}, []image.Point{i2j2})
+						i1j1, found := findClockwise(borders, image.Point{j, i}, i2j2)
 						if found {
 							i2j2 = i1j1
 							i3j3 := image.Point{j, i}
 							for {
-								i4j4, nextPixelFound := findCounterClockwise(borders, []image.Point{i3j3}, []image.Point{i2j2})
+								i4j4, nextPixelFound := findCounterClockwise(borders, i3j3, i2j2)
 								if nextPixelFound {
 									borders.Set(i3j3, -1*nbd)
 								}
