@@ -30,3 +30,8 @@ func (si *SuzukiImage) Set(p image.Point, val int) {
 	idx := p.Y*si.Width + p.X
 	si.data[idx] = val
 }
+
+func (si *SuzukiImage) SetXY(x int, y int, val int) {
+	idx := y*si.Width + x
+	si.data[idx] = val
+}

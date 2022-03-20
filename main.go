@@ -3,144 +3,93 @@ package main
 import (
 	"fmt"
 	"image"
-	"math"
-	"math/rand"
 )
 
-var (
-	dirDelta = []image.Point{{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}}
-)
+func findClockwise(borders *SuzukiImage, centre []image.Point,, i2j2 []image.Point) (image.Point, bool) {
+	mask := [][]bool{{true, true, true}, {true, false, true}, {true, true, true}}
+	_ = mask
 
-
-func clockwise(dir int) int {
-	return dir%8 + 1
+	return image.Point{}, true
 }
 
-func counterClockwise(dir int) int {
-	return (dir+6)%8 + 1
+func findCounterClockwise(borders *SuzukiImage, centre []image.Point,, i2j2 []image.Point) (image.Point, bool) {
+
+	return image.Point{}, false
 }
 
-func move(pixel image.Point, img *SuzukiImage, dir int) image.Point {
-	newP := pixel.Add(dirDelta[dir])
-	width := img.Width
-	height := img.Height
-
-	if (0 < newP.Y && newP.Y <= height) && (0 < newP.X && newP.X <= width) {
-		if img.Get(newP) != 0 {
-			return newP
-		}
-	}
-
-	return image.Point{0, 0}
-}
-
-// returns index of dirDelta that matches direction taken.
-func fromTo(from image.Point, to image.Point) int {
-	delta := to.Sub(from)
-	for i, d := range dirDelta {
-		if d.X == delta.X && d.Y == delta.Y {
-			return i
-		}
-	}
-
-	// unsure... blow up.
-	panic("BOOOOOOM cant figure out direction")
-}
-
-func detectMove(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, border []image.Point, done []bool) {
-	dir := fromTo(p0, p2)
-	moved := clockwise(dir)
-	p1 := image.Point{0, 0}
-	for moved != dir {
-		newP := move(p0, img, moved)
-		if newP.Y != 0 {
-			p1 = newP
-			break
-		}
-		moved = clockwise(moved)
-	}
-
-	if p1.X == 0 && p1.Y == 0 {
-		return
-	}
-	p2 = p1
-	p3 := p0
-
-	done = false
-	for {
-		dir = fromTo(p3, p2)
-		moved = counterClockwise(dir)
-		p4 := image.Point{0, 0}
-		done = false ???
-		for {
-			p4 = move(p3, img, moved)
-			if p4.Y != 0 {
-				break
-			}
-			done[moved] = true
-			moved = counterClockwise(moved)
-		}
-		border = append(border, p3)
-		if p3.Y == 1234 || done[2] {    // TODO(kpfaulkner) NFI about original code... size(image,1) ??
-			img.Set(p3, -1*nbd)
-		} else if img.Get(p3) == 1 {
-			img.Set(p3, nbd)
-		}
-
-		if p4 == p0 && p3 == p1 {
-			break
-		}
-
-		[2 = p3
-		p3 = p4]
-	}
-}
-
-func findContours(img *SuzukiImage) []image.Point{
+func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 	nbd := 1
-	contourList := []image.Point{}
-	done := []bool{false,false,false,false,false,false,false,false}
 
-	height := img.Height
-	width := img.Width
+	// borders[borders == 255] = 1  NFI!!!
+	borders := img // reference to image?
 
-	for i:=0; i< height; i++ {
-		lnbd := 1
-		for j:=0; j<width;j++ {
-			fji := img.GetXY(j,i)
-			isOuter := img.GetXY(j,i) ==1 && (j==0 || img.GetXY(j-1,i) == 0)
-			isHole := img.GetXY(j,i) >= 1 && (j == width || img.GetXY(j+1,i) == 0)
-			if isOuter || isHole {
-				border := []image.Point{}
-				from := image.Point{j,i}
-				if isOuter {
+	for i := 0; i < img.Height; i++ {
+		for j := 0; j < img.Width; j++ {
+			if borders.GetXY(j, i) != 0 {
+
+				if borders.GetXY(j, i) == 1 && borders.GetXY(j-1, i) == 0 {
 					nbd++
-					from = from.Sub(image.Point{1,0})
-				} else {
-					nbd++
-					if fji > 1 {
-						lnbd = fji
+					i2j2 := image.Point{j - 1, i}
+					i1j1, found := findClockwise(borders, []image.Point{{j, i}}, []image.Point{i2j2})
+					if found {
+						i2j2 = i1j1
+						i3j3 := image.Point{j, i}
+						for {
+							i4j4, nextPixelFound := findCounterClockwise(borders, []image.Point{{j, i}}, []image.Point{i2j2})
+							if nextPixelFound {
+								borders.Set(i3j3, -1*nbd)
+							}
+							if !nextPixelFound && borders.Get(i3j3) == 1 {
+								borders.Set(i3j3, nbd)
+							}
+
+							if i4j4.X == j && i4j4.Y == i && i3j3.X == i1j1.X && i3j3.Y == i1j1.Y {
+								break
+							} else {
+								i2j2 = i3j3
+								i3j3 = i4j4
+							}
+						}
+					} else {
+						borders.SetXY(j, i, -1*nbd)
 					}
-					from.Add(image.Point{1,0})
-				}
 
-				p0 := image.Point{j,i}
-				detectMove(img, p0, from, nbd, border, done)
-				if len(border) == 0 {
-					border = append(border, p0)
-					img.Set(p0, -1 * nbd)
+				} else {
+					if borders.GetXY(j, i) >= 1 && borders.GetXY(j+1, i) == 0 {
+						nbd++
+						i2j2 := image.Point{j + 1, i}
+						i1j1, found := findClockwise(borders, []image.Point{{j, i}}, []image.Point{i2j2})
+						if found {
+							i2j2 = i1j1
+							i3j3 := image.Point{j, i}
+							for {
+								i4j4, nextPixelFound := findCounterClockwise(borders, []image.Point{i3j3}, []image.Point{i2j2})
+								if nextPixelFound {
+									borders.Set(i3j3, -1*nbd)
+								}
+								if !nextPixelFound && borders.Get(i3j3) == 1 {
+									borders.Set(i3j3, nbd)
+								}
+
+								if i4j4.X == j && i4j4.Y == i && i3j3.X == i1j1.X && i3j3.Y == i1j1.Y {
+									break
+								} else {
+									i2j2 = i3j3
+									i3j3 = i4j4
+								}
+							}
+						} else {
+							borders.SetXY(j, i, -1*nbd)
+						}
+					}
 				}
-				contourList = append(contourList, border...)   // TODO(kpfaulkner) check this!
-			}
-			if fji != 0 && fji != 1 {
-				lnbd = int(math.Abs(float64(fji)))
 			}
 		}
 	}
-
-	return contourList
+	return borders, nbd
 }
 
 func main() {
 	fmt.Printf("So it begins...\n")
+
 }
