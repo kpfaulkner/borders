@@ -3,36 +3,71 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/color"
+	"image/png"
+	_ "image/png"
+	"os"
+	"time"
 )
 
 var (
-	rollDict  = make(map[image.Point]int)
-	pixelDict = make([]image.Point, 8)
+	cwRollDict  = make(map[image.Point]int)
+	cwPixelDict = make([]image.Point, 8)
+
+	ccwRollDict  = make(map[image.Point]int)
+	ccwPixelDict = make([]image.Point, 8)
 )
 
 func init() {
-	rollDict[image.Point{1, 1}] = 0
-	rollDict[image.Point{0, 1}] = 1
-	rollDict[image.Point{-1, 1}] = 2
-	rollDict[image.Point{-1, 0}] = 3
-	rollDict[image.Point{-1, -1}] = 4
-	rollDict[image.Point{0, -1}] = 5
-	rollDict[image.Point{1, -1}] = 6
-	rollDict[image.Point{1, 0}] = 7
+	cwRollDict[image.Point{1, 1}] = 0
+	cwRollDict[image.Point{0, 1}] = 1
+	cwRollDict[image.Point{-1, 1}] = 2
+	cwRollDict[image.Point{-1, 0}] = 3
+	cwRollDict[image.Point{-1, -1}] = 4
+	cwRollDict[image.Point{0, -1}] = 5
+	cwRollDict[image.Point{1, -1}] = 6
+	cwRollDict[image.Point{1, 0}] = 7
 
-	pixelDict[0] = image.Point{1, 1}
-	pixelDict[1] = image.Point{0, 1}
-	pixelDict[2] = image.Point{-1, 1}
-	pixelDict[3] = image.Point{-1, 0}
-	pixelDict[4] = image.Point{-1, -1}
-	pixelDict[5] = image.Point{0, -1}
-	pixelDict[6] = image.Point{1, -1}
-	pixelDict[7] = image.Point{1, 0}
+	cwPixelDict[0] = image.Point{1, 1}
+	cwPixelDict[1] = image.Point{0, 1}
+	cwPixelDict[2] = image.Point{-1, 1}
+	cwPixelDict[3] = image.Point{-1, 0}
+	cwPixelDict[4] = image.Point{-1, -1}
+	cwPixelDict[5] = image.Point{0, -1}
+	cwPixelDict[6] = image.Point{1, -1}
+	cwPixelDict[7] = image.Point{1, 0}
+
+	ccwRollDict[image.Point{1, 1}] = 0
+	ccwRollDict[image.Point{0, 1}] = 1
+	ccwRollDict[image.Point{-1, 1}] = 2
+	ccwRollDict[image.Point{-1, 0}] = 3
+	ccwRollDict[image.Point{-1, -1}] = 4
+	ccwRollDict[image.Point{0, -1}] = 5
+	ccwRollDict[image.Point{1, -1}] = 6
+	ccwRollDict[image.Point{1, 0}] = 7
+
+	ccwPixelDict[0] = image.Point{1, 1}
+	ccwPixelDict[1] = image.Point{1, 0}
+	ccwPixelDict[2] = image.Point{1, -1}
+	ccwPixelDict[3] = image.Point{0, -1}
+	ccwPixelDict[4] = image.Point{-1, -1}
+	ccwPixelDict[5] = image.Point{-1, 0}
+	ccwPixelDict[6] = image.Point{-1, 1}
+	ccwPixelDict[7] = image.Point{0, 1}
+
 }
 
-func rotateSliceLeft(s []int, v int) []int {
-	rotation := v % len(s)
-	newS := append(s[rotation:], s[:rotation]...)
+func rotateSlice(s []int, rotation int) []int {
+	//rotation := v % len(s)
+	if rotation < 0 {
+		r := rotation * -1
+		newS := append(s[r:], s[:r]...)
+		return newS
+	}
+
+	index := len(s) - rotation
+	newS := append(s[index:], s[:index]...)
+
 	return newS
 }
 
@@ -47,7 +82,7 @@ func getValuesAroundPoint(borders *SuzukiImage, p image.Point) []int {
 			// dont want centre.
 			if !(i == p.Y && j == p.X) {
 				pp := borders.GetXY(j, i)
-				if pp > 0 {
+				if pp != 0 {
 					pp = 1
 				}
 				pointVal = append(pointVal, pp)
@@ -59,6 +94,16 @@ func getValuesAroundPoint(borders *SuzukiImage, p image.Point) []int {
 
 }
 
+// naive approach but will do until perf testing says otherwise
+func firstIndexContaining(l []int, v int) (int, error) {
+	for i, vv := range l {
+		if vv == v {
+			return i, nil
+		}
+	}
+	return 0, fmt.Errorf("no value")
+}
+
 // steps:
 // 1) get 3x3 grid with centre being the centre of the grid
 // 2) swap... (unsure reason)
@@ -68,27 +113,33 @@ func findClockwise(borders *SuzukiImage, centre image.Point, i2j2 image.Point) (
 
 	values := getValuesAroundPoint(borders, centre)
 
-	values[3] = 1
-	values[5] = 1
-	values[6] = 1
-	values[7] = 1
-
 	// this is purely taken from existing code...  do NOT understand why yet!
 	values[7], values[3], values[6], values[5], values[4] = values[3], values[4], values[5], values[6], values[7]
 
 	dir := centre.Sub(i2j2)
-	v := rollDict[dir]
-	values2 := rotateSliceLeft(values, v)
+	v := cwRollDict[dir]
+	values2 := rotateSlice(values, -1*v)
+
+	// anything non 0 set to 1
+	for i, v := range values2 {
+		if v != 0 {
+			values2[i] = 1
+		}
+	}
 
 	var result int
 	dir = centre.Sub(i2j2)
-	if values2[1]+rollDict[dir] >= 8 {
-		result = values2[1] - 8 + rollDict[dir]
+	vv, err := firstIndexContaining(values2, 1)
+	if err != nil {
+		return image.Point{}, false
+	}
+	if vv+cwRollDict[dir] >= 8 {
+		result = vv - 8 + cwRollDict[dir]
 	} else {
-		result = values2[1] + rollDict[dir]
+		result = vv + cwRollDict[dir]
 	}
 
-	p := pixelDict[result]
+	p := cwPixelDict[result]
 
 	pp := centre.Sub(p)
 	return pp, true
@@ -96,13 +147,55 @@ func findClockwise(borders *SuzukiImage, centre image.Point, i2j2 image.Point) (
 
 func findCounterClockwise(borders *SuzukiImage, centre image.Point, i2j2 image.Point) (image.Point, bool) {
 
-	return image.Point{}, false
+	values := getValuesAroundPoint(borders, centre)
+
+	// this is purely taken from existing code...  do NOT understand why yet!
+	values[7], values[6], values[1], values[5], values[2], values[3], values[4] = values[1], values[2], values[3], values[4], values[5], values[6], values[7]
+	dir := centre.Sub(i2j2)
+	v := ccwRollDict[dir]
+	values2 := rotateSlice(values, v)
+	values2[0] = 0
+
+	// anything non 0 set to 1
+	for i, v := range values2 {
+		if v != 0 {
+			values2[i] = 1
+		}
+	}
+
+	pixelFound := false
+	dir = centre.Sub(i2j2)
+
+	vv, err := firstIndexContaining(values2, 1)
+	if err != nil {
+		return image.Point{}, false
+	}
+	if ccwRollDict[dir] > 3 {
+		if ccwRollDict[dir]-vv < 3 {
+			pixelFound = true
+		}
+	}
+	if ccwRollDict[dir] < 3 {
+		if 8+ccwRollDict[dir]-vv < 3 {
+			pixelFound = true
+		}
+	}
+
+	var result int
+	if vv-ccwRollDict[dir] < 0 {
+		result = vv + 8 - ccwRollDict[dir]
+	} else {
+		result = vv - ccwRollDict[dir]
+	}
+
+	p := ccwPixelDict[result]
+	pp := centre.Sub(p)
+	return pp, pixelFound
 }
 
 func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 	nbd := 1
 
-	// borders[borders == 255] = 1  NFI!!!
 	borders := img // reference to image?
 
 	for i := 0; i < img.Height; i++ {
@@ -117,7 +210,7 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 						i2j2 = i1j1
 						i3j3 := image.Point{j, i}
 						for {
-							i4j4, nextPixelFound := findCounterClockwise(borders, image.Point{j, i}, i2j2)
+							i4j4, nextPixelFound := findCounterClockwise(borders, i3j3, i2j2)
 							if nextPixelFound {
 								borders.Set(i3j3, -1*nbd)
 							}
@@ -171,9 +264,97 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 	return borders, nbd
 }
 
+func loadImage(filename string) *SuzukiImage {
+	f, err := os.Open(filename)
+	if err != nil {
+		panic("BOOM on file")
+	}
+	defer f.Close()
+
+	img, _, err := image.Decode(f)
+	if err != nil {
+		panic("BOOM2 on file")
+	}
+
+	black := color.RGBA{0, 0, 0, 255}
+	si := NewSuzukiImage(img.Bounds().Dx(), img.Bounds().Dy())
+	// dumb... but convert to own image format for now.
+	for y := 0; y < img.Bounds().Dy(); y++ {
+		for x := 0; x < img.Bounds().Dx(); x++ {
+			cc := 0
+			c := img.At(x, y)
+			if c != black {
+				cc = 1
+			}
+			si.SetXY(x, y, cc)
+		}
+
+	}
+
+	return si
+}
+
+func saveImage(filename string, si *SuzukiImage) error {
+
+	upLeft := image.Point{0, 0}
+	lowRight := image.Point{si.Width, si.Height}
+
+	img := image.NewRGBA(image.Rectangle{upLeft, lowRight})
+
+	for x := 0; x < si.Width; x++ {
+		for y := 0; y < si.Height; y++ {
+			p := si.GetXY(x, y)
+			if p != 0 && p != 1 {
+				img.Set(x, y, color.White)
+			} else {
+				img.Set(x, y, color.Black)
+			}
+		}
+	}
+
+	f, _ := os.Create(filename)
+	png.Encode(f, img)
+	return nil
+}
+
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	si := NewSuzukiImage(100, 100)
-	findClockwise(si, image.Point{292, 74}, image.Point{293, 74})
+	si := NewSuzukiImage(50, 50)
+
+	for x := 10; x < 40; x++ {
+		for y := 10; y < 40; y++ {
+			si.SetXY(x, y, 1)
+		}
+	}
+
+	for x := 42; x < 46; x++ {
+		for y := 42; y < 46; y++ {
+			si.SetXY(x, y, 1)
+		}
+	}
+
+	// add hole 1
+	for x := 20; x < 24; x++ {
+		for y := 20; y < 24; y++ {
+			si.SetXY(x, y, 0)
+		}
+	}
+
+	// add hole 2
+	for x := 28; x < 32; x++ {
+		for y := 28; y < 32; y++ {
+			si.SetXY(x, y, 0)
+		}
+	}
+
+	start := time.Now()
+	//si = loadImage("image2.png")
+	processingStart := time.Now()
+	si2, _ := findBorders(si)
+	fmt.Printf("processing took %d ms\n", time.Now().Sub(processingStart).Milliseconds())
+	t := si2.DisplayAsText()
+	fmt.Printf("%+v\n", t)
+	saveImage("border.png", si2)
+	fmt.Printf("load to save took %d ms\n", time.Now().Sub(start).Milliseconds())
 }
