@@ -7,9 +7,10 @@ import (
 )
 
 type SuzukiImage struct {
-	Width  int
-	Height int
-	data   []int
+	Width   int
+	Height  int
+	data    []int
+	dataLen int
 }
 
 func NewSuzukiImage(width int, height int) *SuzukiImage {
@@ -17,6 +18,7 @@ func NewSuzukiImage(width int, height int) *SuzukiImage {
 	si.Width = width
 	si.Height = height
 	si.data = make([]int, width*height)
+	si.dataLen = width * height // just saves us calculating a lot
 	return &si
 }
 
@@ -28,8 +30,13 @@ func (si *SuzukiImage) Get(p image.Point) int {
 func (si *SuzukiImage) GetXY(x int, y int) int {
 	idx := y*si.Width + x
 
-	if idx == -1 {
-		fmt.Printf("BOOM !!!\n")
+	if idx == -1 || idx < 0 {
+		//fmt.Printf("BOOM !!! x %d : y %d\n", x, y)
+		return 0 // safe?
+	}
+
+	if idx >= si.dataLen {
+		return 0 // safe?
 	}
 	return si.data[idx]
 }

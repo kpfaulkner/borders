@@ -131,14 +131,12 @@ func findClockwise(borders *SuzukiImage, centre image.Point, i2j2 image.Point) (
 	dir = centre.Sub(i2j2)
 	vv, err := firstIndexContaining(values2, 1)
 	if err != nil {
-		return image.Point{}, false
-	}
-	if vv+cwRollDict[dir] >= 8 {
-		result = vv - 8 + cwRollDict[dir]
-	} else {
-		result = vv + cwRollDict[dir]
+		//fmt.Printf("XXXXXXXXXXX returning empty point!\n")
+		//return image.Point{}, false
+		return i2j2, false
 	}
 
+	result = (vv + cwRollDict[dir]) % 8
 	p := cwPixelDict[result]
 
 	pp := centre.Sub(p)
@@ -168,7 +166,9 @@ func findCounterClockwise(borders *SuzukiImage, centre image.Point, i2j2 image.P
 
 	vv, err := firstIndexContaining(values2, 1)
 	if err != nil {
-		return image.Point{}, false
+		//fmt.Printf("XXXXXXX returning empty point2\n")
+		//return image.Point{}, false
+		return i2j2, false
 	}
 	if ccwRollDict[dir] > 3 {
 		if ccwRollDict[dir]-vv < 3 {
@@ -181,22 +181,22 @@ func findCounterClockwise(borders *SuzukiImage, centre image.Point, i2j2 image.P
 		}
 	}
 
-	var result int
-	if vv-ccwRollDict[dir] < 0 {
-		result = vv + 8 - ccwRollDict[dir]
-	} else {
-		result = vv - ccwRollDict[dir]
-	}
-
+	result := (vv - ccwRollDict[dir] + 8) % 8
 	p := ccwPixelDict[result]
 	pp := centre.Sub(p)
+
+	if pp.X == 0 && pp.Y == 0 {
+		//fmt.Printf("XXXXX\n")
+	}
 	return pp, pixelFound
 }
 
-func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
+func findBorders(img *SuzukiImage) (*SuzukiImage, *Contours, int) {
 	nbd := 1
 
 	borders := img // reference to image?
+
+	contours := NewContours()
 
 	for i := 0; i < img.Height; i++ {
 		for j := 0; j < img.Width; j++ {
@@ -207,15 +207,37 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 					i2j2 := image.Point{j - 1, i}
 					i1j1, found := findClockwise(borders, image.Point{j, i}, i2j2)
 					if found {
+						if i == 1 && j == 4813 {
+							//fmt.Printf("XXXX\n")
+						}
 						i2j2 = i1j1
 						i3j3 := image.Point{j, i}
+						count := 0
 						for {
+							count++
+							if i3j3.X == 0 && i3j3.Y == 0 {
+								//fmt.Printf("XXXX\n")
+							}
+
 							i4j4, nextPixelFound := findCounterClockwise(borders, i3j3, i2j2)
+
+							//fmt.Printf("11111\n")
+							if i4j4.X == 0 && i4j4.Y == 0 {
+								//fmt.Printf("XXXX\n")
+							}
+
 							if nextPixelFound {
 								borders.Set(i3j3, -1*nbd)
+								contours.AddPointToContourId(nbd, i3j3)
 							}
 							if !nextPixelFound && borders.Get(i3j3) == 1 {
 								borders.Set(i3j3, nbd)
+								contours.AddPointToContourId(nbd, i3j3)
+							}
+
+							// making this part up.. unsure of algo.
+							if !nextPixelFound && borders.Get(i3j3) != 1 {
+								//break
 							}
 
 							if i4j4.X == j && i4j4.Y == i && i3j3.X == i1j1.X && i3j3.Y == i1j1.Y {
@@ -227,6 +249,7 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 						}
 					} else {
 						borders.SetXY(j, i, -1*nbd)
+						contours.AddPointToContourId(nbd, image.Point{j, i})
 					}
 
 				} else {
@@ -239,11 +262,19 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 							i3j3 := image.Point{j, i}
 							for {
 								i4j4, nextPixelFound := findCounterClockwise(borders, i3j3, i2j2)
+								//fmt.Printf("22222\n")
 								if nextPixelFound {
 									borders.Set(i3j3, -1*nbd)
+									contours.AddPointToContourId(nbd, i3j3)
 								}
 								if !nextPixelFound && borders.Get(i3j3) == 1 {
 									borders.Set(i3j3, nbd)
+									contours.AddPointToContourId(nbd, i3j3)
+								}
+
+								// making this part up.. unsure of algo.
+								if !nextPixelFound && borders.Get(i3j3) != 1 {
+									//break
 								}
 
 								if i4j4.X == j && i4j4.Y == i && i3j3.X == i1j1.X && i3j3.Y == i1j1.Y {
@@ -255,13 +286,14 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, int) {
 							}
 						} else {
 							borders.SetXY(j, i, -1*nbd)
+							contours.AddPointToContourId(nbd, image.Point{j, i})
 						}
 					}
 				}
 			}
 		}
 	}
-	return borders, nbd
+	return borders, contours, nbd
 }
 
 func loadImage(filename string) *SuzukiImage {
@@ -276,17 +308,28 @@ func loadImage(filename string) *SuzukiImage {
 		panic("BOOM2 on file")
 	}
 
-	black := color.RGBA{0, 0, 0, 255}
-	si := NewSuzukiImage(img.Bounds().Dx(), img.Bounds().Dy())
+	//black := color.RGBA{0, 0, 0, 255}
+
+	padding := 2
+	halfPadding := padding / 2
+
+	padding = 0
+	halfPadding = 0
+
+	// need border to be black. Pad edges with 1 black pixel
+	si := NewSuzukiImage(img.Bounds().Dx()+padding, img.Bounds().Dy()+padding)
+
 	// dumb... but convert to own image format for now.
 	for y := 0; y < img.Bounds().Dy(); y++ {
 		for x := 0; x < img.Bounds().Dx(); x++ {
 			cc := 0
 			c := img.At(x, y)
-			if c != black {
+			r, g, b, _ := c.RGBA()
+			//fmt.Printf("%d %d %d %d\n", r, g, b, a)
+			if !(r == 0 && g == 0 && b == 0) {
 				cc = 1
 			}
-			si.SetXY(x, y, cc)
+			si.SetXY(x+halfPadding, y+halfPadding, cc)
 		}
 
 	}
@@ -309,6 +352,65 @@ func saveImage(filename string, si *SuzukiImage) error {
 			} else {
 				img.Set(x, y, color.Black)
 			}
+		}
+	}
+
+	f, _ := os.Create(filename)
+	png.Encode(f, img)
+	return nil
+}
+
+func saveContoursImage(filename string, c *Contours, width int, height int) error {
+
+	upLeft := image.Point{0, 0}
+	lowRight := image.Point{width, height}
+
+	img := image.NewRGBA(image.Rectangle{upLeft, lowRight})
+
+	// naive fill
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			img.Set(x, y, color.Black)
+		}
+	}
+
+	colours := []color.RGBA{
+		{50, 0, 0, 255},
+		{100, 0, 0, 255},
+		{150, 0, 0, 255},
+		{200, 0, 0, 255},
+		{250, 0, 0, 255},
+		{50, 50, 0, 255},
+		{100, 50, 0, 255},
+		{150, 50, 0, 255},
+		{200, 50, 0, 255},
+		{250, 50, 0, 255},
+		{50, 100, 0, 255},
+		{100, 100, 0, 255},
+		{150, 100, 0, 255},
+		{200, 100, 0, 255},
+		{250, 100, 0, 255},
+		{50, 150, 0, 255},
+		{100, 150, 0, 255},
+		{150, 150, 0, 255},
+		{200, 150, 0, 255},
+		{250, 150, 0, 255},
+		{50, 200, 0, 255},
+		{100, 200, 0, 255},
+		{150, 200, 0, 255},
+		{200, 200, 0, 255},
+		{250, 200, 0, 255},
+	}
+	max := len(colours)
+	colour := 0
+	for _, contour := range c.contours {
+		colourToUse := colours[colour]
+		for _, p := range contour.points {
+			img.Set(p.X, p.Y, colourToUse)
+		}
+		colour++
+		if colour >= max {
+			colour = 0
 		}
 	}
 
@@ -349,12 +451,14 @@ func main() {
 	}
 
 	start := time.Now()
-	//si = loadImage("image2.png")
+	si = loadImage("big-test-image.png")
+	//si = loadImage("test5.png")
 	processingStart := time.Now()
-	si2, _ := findBorders(si)
+	si2, contours, _ := findBorders(si)
 	fmt.Printf("processing took %d ms\n", time.Now().Sub(processingStart).Milliseconds())
-	t := si2.DisplayAsText()
-	fmt.Printf("%+v\n", t)
+	//t := si2.DisplayAsText()
+	//fmt.Printf("%+v\n", t)
 	saveImage("border.png", si2)
+	saveContoursImage("contours.png", contours, si2.Width, si2.Height)
 	fmt.Printf("load to save took %d ms\n", time.Now().Sub(start).Milliseconds())
 }
