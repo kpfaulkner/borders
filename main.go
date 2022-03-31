@@ -7,6 +7,7 @@ import (
 	"image/png"
 	_ "image/png"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -360,7 +361,7 @@ func saveImage(filename string, si *SuzukiImage) error {
 	return nil
 }
 
-func saveContoursImage(filename string, c *Contours, width int, height int) error {
+func saveContoursImage(filename string, c *Contours, width int, height int, flipBook bool, minContourSize int, smallestToLargest bool) error {
 
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{width, height}
@@ -403,7 +404,24 @@ func saveContoursImage(filename string, c *Contours, width int, height int) erro
 	}
 	max := len(colours)
 	colour := 0
-	for _, contour := range c.contours {
+	count := 0
+
+	contours := []*Contour{}
+	for _, cc := range c.contours {
+		contours = append(contours, cc)
+	}
+
+	//contours := c.contours
+	if smallestToLargest {
+		sort.Slice(contours, func(i int, j int) bool {
+			return len(contours[i].points) < len(contours[j].points)
+		})
+	}
+
+	for _, contour := range contours {
+		if len(contour.points) < minContourSize {
+			continue
+		}
 		colourToUse := colours[colour]
 		for _, p := range contour.points {
 			img.Set(p.X, p.Y, colourToUse)
@@ -412,11 +430,44 @@ func saveContoursImage(filename string, c *Contours, width int, height int) erro
 		if colour >= max {
 			colour = 0
 		}
+
+		// save new image per contour added...  crazy
+		if flipBook {
+			fn := fmt.Sprintf("%s-%d.png", filename, count)
+			f, _ := os.Create(fn)
+			png.Encode(f, img)
+			f.Close()
+		}
+		count++
 	}
 
 	f, _ := os.Create(filename)
 	png.Encode(f, img)
 	return nil
+}
+
+// writes details out to stdout
+func displayContourStats(c *Contours) {
+
+	shortestLength := 1000
+	longestLength := 0
+	averageLength := 0
+	for _, cc := range c.contours {
+		l := len(cc.points)
+		if l > longestLength {
+			longestLength = l
+		}
+
+		if l < shortestLength {
+			shortestLength = l
+		}
+		averageLength += l
+	}
+
+	fmt.Printf("number of contours %d\n", len(c.contours))
+	fmt.Printf("longest length %d\n", longestLength)
+	fmt.Printf("shortest length %d\n", shortestLength)
+	fmt.Printf("average length %d\n", averageLength/len(c.contours))
 }
 
 func main() {
@@ -456,9 +507,11 @@ func main() {
 	processingStart := time.Now()
 	si2, contours, _ := findBorders(si)
 	fmt.Printf("processing took %d ms\n", time.Now().Sub(processingStart).Milliseconds())
+
+	displayContourStats(contours)
 	//t := si2.DisplayAsText()
 	//fmt.Printf("%+v\n", t)
 	saveImage("border.png", si2)
-	saveContoursImage("contours.png", contours, si2.Width, si2.Height)
+	saveContoursImage("contours.png", contours, si2.Width, si2.Height, false, 10, true)
 	fmt.Printf("load to save took %d ms\n", time.Now().Sub(start).Milliseconds())
 }
