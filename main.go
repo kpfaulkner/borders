@@ -9,6 +9,8 @@ import (
 	"os"
 	"sort"
 	"time"
+
+	"github.com/pkg/profile"
 )
 
 var (
@@ -200,7 +202,7 @@ func findCounterClockwise(borders *SuzukiImage, centre image.Point, i2j2 image.P
 }
 
 func findBorders(img *SuzukiImage) (*SuzukiImage, *Contours, int) {
-	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	nbd := 1
 
 	borders := img // reference to image?
