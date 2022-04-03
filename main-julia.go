@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 	"image"
-	"math"
 	"time"
+
+	"github.com/pkg/profile"
 )
 
 var (
@@ -100,18 +101,15 @@ func detectMove(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done 
 
 func findContours(img *SuzukiImage) []*Contour {
 
-	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	nbd := 1
 	contours := []*Contour{}
 	done := []bool{false, false, false, false, false, false, false, false}
 
 	height := img.Height
 	width := img.Width
-	var lnbd int
 	for i := 0; i < height; i++ {
-		lnbd = 1
 		for j := 0; j < width; j++ {
-			fji := img.GetXY(j, i)
 			isOuter := img.GetXY(j, i) == 1 && (j == 0 || img.GetXY(j-1, i) == 0)
 			isHole := img.GetXY(j, i) >= 1 && (j == width-1 || img.GetXY(j+1, i) == 0)
 			if isOuter || isHole {
@@ -122,9 +120,6 @@ func findContours(img *SuzukiImage) []*Contour {
 					from = from.Sub(image.Point{1, 0})
 				} else {
 					nbd++
-					if fji > 1 {
-						lnbd = fji
-					}
 					from = from.Add(image.Point{1, 0})
 				}
 
@@ -138,13 +133,8 @@ func findContours(img *SuzukiImage) []*Contour {
 				contour.points = border
 				contours = append(contours, contour)
 			}
-			if fji != 0 && fji != 1 {
-				lnbd = int(math.Abs(float64(fji)))
-			}
 		}
 	}
-
-	fmt.Printf("lnbd %d\n", lnbd)
 	return contours
 }
 
