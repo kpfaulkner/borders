@@ -74,11 +74,17 @@ func rotateSlice(s []int, rotation int) []int {
 
 // gets values around a point.
 // filters out centre (p) point... so slice should be 8 elements in length.
+// fixed slice of 8, knocked down runtime of this by 40% or so.
 func getValuesAroundPoint(borders *SuzukiImage, p image.Point) []int {
 
-	pointVal := []int{}
-	for i := p.Y - 1; i < p.Y+2; i++ {
-		for j := p.X - 1; j < p.X+2; j++ {
+	pointVal := make([]int, 8, 8)
+	count := 0
+	minX := p.X - 1
+	maxX := p.X + 2
+	minY := p.Y - 1
+	maxY := p.Y + 2
+	for i := minY; i < maxY; i++ {
+		for j := minX; j < maxX; j++ {
 
 			// dont want centre.
 			if !(i == p.Y && j == p.X) {
@@ -86,7 +92,8 @@ func getValuesAroundPoint(borders *SuzukiImage, p image.Point) []int {
 				if pp != 0 {
 					pp = 1
 				}
-				pointVal = append(pointVal, pp)
+				pointVal[count] = pp
+				count++
 			}
 		}
 	}
@@ -193,6 +200,7 @@ func findCounterClockwise(borders *SuzukiImage, centre image.Point, i2j2 image.P
 }
 
 func findBorders(img *SuzukiImage) (*SuzukiImage, *Contours, int) {
+	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	nbd := 1
 
 	borders := img // reference to image?
@@ -216,29 +224,15 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, *Contours, int) {
 						count := 0
 						for {
 							count++
-							if i3j3.X == 0 && i3j3.Y == 0 {
-								//fmt.Printf("XXXX\n")
-							}
-
 							i4j4, nextPixelFound := findCounterClockwise(borders, i3j3, i2j2)
-
-							//fmt.Printf("11111\n")
-							if i4j4.X == 0 && i4j4.Y == 0 {
-								//fmt.Printf("XXXX\n")
-							}
 
 							if nextPixelFound {
 								borders.Set(i3j3, -1*nbd)
 								contours.AddPointToContourId(nbd, i3j3)
 							}
-							if !nextPixelFound && borders.Get(i3j3) == 1 {
+							if !nextPixelFound && borders.Get(i3j3) != 0 {
 								borders.Set(i3j3, nbd)
 								contours.AddPointToContourId(nbd, i3j3)
-							}
-
-							// making this part up.. unsure of algo.
-							if !nextPixelFound && borders.Get(i3j3) != 1 {
-								//break
 							}
 
 							if i4j4.X == j && i4j4.Y == i && i3j3.X == i1j1.X && i3j3.Y == i1j1.Y {
@@ -268,14 +262,9 @@ func findBorders(img *SuzukiImage) (*SuzukiImage, *Contours, int) {
 									borders.Set(i3j3, -1*nbd)
 									contours.AddPointToContourId(nbd, i3j3)
 								}
-								if !nextPixelFound && borders.Get(i3j3) == 1 {
+								if !nextPixelFound && borders.Get(i3j3) != 0 {
 									borders.Set(i3j3, nbd)
 									contours.AddPointToContourId(nbd, i3j3)
-								}
-
-								// making this part up.. unsure of algo.
-								if !nextPixelFound && borders.Get(i3j3) != 1 {
-									//break
 								}
 
 								if i4j4.X == j && i4j4.Y == i && i3j3.X == i1j1.X && i3j3.Y == i1j1.Y {
@@ -375,7 +364,7 @@ func saveContoursImage(filename string, c *Contours, width int, height int, flip
 		}
 	}
 
-	colours := []color.RGBA{
+	_ = []color.RGBA{
 		{50, 0, 0, 255},
 		{100, 0, 0, 255},
 		{150, 0, 0, 255},
@@ -402,13 +391,31 @@ func saveContoursImage(filename string, c *Contours, width int, height int, flip
 		{200, 200, 0, 255},
 		{250, 200, 0, 255},
 	}
+
+	colours := []color.RGBA{
+		{255, 0, 0, 255},
+		{255, 106, 0, 255},
+		{255, 216, 0, 255},
+		{0, 255, 0, 255},
+		{127, 255, 197, 255},
+		{72, 0, 255, 255},
+		{255, 127, 182, 255},
+	}
+
 	max := len(colours)
 	colour := 0
 	count := 0
 
 	contours := []*Contour{}
 	for _, cc := range c.contours {
+
 		contours = append(contours, cc)
+
+		// only get length 11910
+		if len(cc.points) == 11910 {
+			//contours = append(contours, cc)
+		}
+
 	}
 
 	//contours := c.contours
@@ -419,10 +426,13 @@ func saveContoursImage(filename string, c *Contours, width int, height int, flip
 	}
 
 	for _, contour := range contours {
+
+		fmt.Printf("contour %d has %d points\n", count, len(contour.points))
 		if len(contour.points) < minContourSize {
 			continue
 		}
 		colourToUse := colours[colour]
+
 		for _, p := range contour.points {
 			img.Set(p.X, p.Y, colourToUse)
 		}
@@ -470,7 +480,7 @@ func displayContourStats(c *Contours) {
 	fmt.Printf("average length %d\n", averageLength/len(c.contours))
 }
 
-func main() {
+func main1() {
 	fmt.Printf("So it begins...\n")
 
 	si := NewSuzukiImage(50, 50)
@@ -504,6 +514,8 @@ func main() {
 	start := time.Now()
 	si = loadImage("big-test-image.png")
 	//si = loadImage("test5.png")
+	//si = loadImage("small.png")
+	//si = loadImage("image2.png")
 	processingStart := time.Now()
 	si2, contours, _ := findBorders(si)
 	fmt.Printf("processing took %d ms\n", time.Now().Sub(processingStart).Milliseconds())
@@ -512,6 +524,7 @@ func main() {
 	//t := si2.DisplayAsText()
 	//fmt.Printf("%+v\n", t)
 	saveImage("border.png", si2)
-	saveContoursImage("contours.png", contours, si2.Width, si2.Height, false, 10, true)
+	saveContoursImage("contours.png", contours, si2.Width, si2.Height, false, 30000, false)
+	//saveContoursImage("./contours", contours, si2.Width, si2.Height, true, 0, false)
 	fmt.Printf("load to save took %d ms\n", time.Now().Sub(start).Milliseconds())
 }
