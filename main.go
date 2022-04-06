@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"sort"
 	"time"
 )
 
@@ -97,17 +98,26 @@ func detectMove(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done 
 	return border
 }
 
-func findContours(img *SuzukiImage) []*Contour {
+func findContours(img *SuzukiImage) map[int]*Contour {
 
 	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	nbd := 1
-	contours := []*Contour{}
+	lnbd := 1
+	contours := make(map[int]*Contour)
 	done := []bool{false, false, false, false, false, false, false, false}
 
 	height := img.Height
 	width := img.Width
+	outerBorderNo := 0
+	innerBorderNo := 0
+	current := 0
+	checkIsOuter := false
+
 	for i := 0; i < height; i++ {
+		lnbd = 1
 		for j := 0; j < width; j++ {
+			fji := img.GetXY(j, i)
+
 			isOuter := img.GetXY(j, i) == 1 && (j == 0 || img.GetXY(j-1, i) == 0)
 			isHole := img.GetXY(j, i) >= 1 && (j == width-1 || img.GetXY(j+1, i) == 0)
 			if isOuter || isHole {
@@ -116,21 +126,58 @@ func findContours(img *SuzukiImage) []*Contour {
 				if isOuter {
 					nbd++
 					from = from.Sub(image.Point{1, 0})
+					outerBorderNo = nbd
+					checkIsOuter = true
 				} else {
 					nbd++
+					if fji > 1 {
+						lnbd = fji
+					}
 					from = from.Add(image.Point{1, 0})
+					innerBorderNo = nbd
+				}
+
+				if isHole {
+					checkIsOuter = false
 				}
 
 				p0 := image.Point{j, i}
+				fmt.Printf("pos %+v : %+v : %+v\n", p0, isOuter, isHole)
 				border := detectMove(img, p0, from, nbd, done)
 				if len(border) == 0 {
 					border = append(border, p0)
 					img.Set(p0, -1*nbd)
 				}
+
 				contour := NewContour(nbd)
+				contour.isHole = isHole
+				contour.isOuter = isOuter
 				contour.points = border
-				contours = append(contours, contour)
+
+				fmt.Printf("Current %d\n", current)
+				if isHole && outerBorderNo != 0 {
+					contour.parentId = outerBorderNo
+				}
+
+				contour.parentId = lnbd
+
+				contours[nbd] = contour
+				//contours = append(contours, contour)
+
+				fmt.Printf("lnbd %d\n", lnbd)
+
+				fmt.Printf("checkIsOuter %+v\n", checkIsOuter)
+				//outerBorderNo = nbd
+				fmt.Printf("last outer %d last inner %d\n", outerBorderNo, innerBorderNo)
+
 			}
+			if fji != 0 && fji != 1 {
+				lnbd = fji
+				if lnbd < 0 {
+					lnbd *= -1
+				}
+			}
+
 		}
 	}
 	return contours
@@ -139,14 +186,40 @@ func findContours(img *SuzukiImage) []*Contour {
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	//img := loadImage("image2.png")
-	img := loadImage("big-test-image.png")
+	img := loadImage("image1.png")
+	//img := loadImage("big-test-image.png")
 
 	start := time.Now()
 	cont := findContours(img)
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
-	saveContourSliceImage("julia-contour.png", cont, img.Width, img.Height, false, 0, false)
+	//saveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0, false)
+	//saveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0, false)
+	saveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0, false)
+
+	contours := []*Contour{}
+	for _, cc := range cont {
+		contours = append(contours, cc)
+	}
+
+	sort.Slice(contours, func(i int, j int) bool {
+		return contours[i].id < contours[j].id
+	})
+
+	for _, c := range contours {
+		parentId := c.parentId
+
+		if c.isOuter {
+			if c.parentId != 1 {
+				parent := cont[c.parentId]
+				if parent.isOuter {
+					// how is parent of an outer... and outer? switch to parent being 2?
+					parentId = 1
+				}
+			}
+		}
+		fmt.Printf("%d %d : %+v : %+v\n", c.id, parentId, c.isOuter, c.isHole)
+	}
 
 	fmt.Printf("NUm contours are %d\n", len(cont))
 }

@@ -458,7 +458,7 @@ func saveContoursImage(filename string, c *Contours, width int, height int, flip
 	return nil
 }
 
-func saveContourSliceImage(filename string, c []*Contour, width int, height int, flipBook bool, minContourSize int, smallestToLargest bool) error {
+func saveContourSliceImage(filename string, c map[int]*Contour, width int, height int, flipBook bool, minContourSize int, smallestToLargest bool) error {
 
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{width, height}
@@ -516,15 +516,12 @@ func saveContourSliceImage(filename string, c []*Contour, width int, height int,
 
 	contours := []*Contour{}
 	for _, cc := range c {
-
 		contours = append(contours, cc)
-
-		// only get length 11910
-		if len(cc.points) == 11910 {
-			//contours = append(contours, cc)
-		}
-
 	}
+
+	sort.Slice(contours, func(i int, j int) bool {
+		return contours[i].id < contours[j].id
+	})
 
 	//contours := c.contours
 	if smallestToLargest {
@@ -534,8 +531,7 @@ func saveContourSliceImage(filename string, c []*Contour, width int, height int,
 	}
 
 	for _, contour := range contours {
-
-		//fmt.Printf("contour %d has %d points\n", count, len(contour.points))
+		fmt.Printf("contour %d has %d points : isOuter %v :  isHole %v\n", count, len(contour.points), contour.isOuter, contour.isHole)
 		if len(contour.points) < minContourSize {
 			continue
 		}
