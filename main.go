@@ -101,20 +101,20 @@ func detectMove(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done 
 func findContours(img *SuzukiImage) map[int]*Contour {
 
 	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
-	nbd := []int{1}
-	lnbd := []int{1}
+	nbd := 1
+	lnbd := 1
 
 	contours := make(map[int]*Contour)
 	done := []bool{false, false, false, false, false, false, false, false}
 
 	contour := NewContour(1)
-	contours[lnbd[0]] = contour
+	contours[lnbd] = contour
 
 	height := img.Height
 	width := img.Width
 
 	for i := 0; i < height; i++ {
-		lnbd[0] = 1
+		lnbd = 1
 		for j := 0; j < width; j++ {
 			fji := img.GetXY(j, i)
 
@@ -124,25 +124,23 @@ func findContours(img *SuzukiImage) map[int]*Contour {
 
 				var contourPrime *Contour
 				contour := NewContour(1)
-
 				from := image.Point{j, i}
 				if isOuter {
-					nbd[0] += 1
+					nbd += 1
 					from = from.Sub(image.Point{1, 0})
 					contour.borderType = Outer
-					contourPrime = contours[lnbd[0]]
+					contourPrime = contours[lnbd]
 					if contourPrime.borderType == Outer {
 						contour.parentId = contourPrime.parentId
 					} else {
 						contour.parentId = contourPrime.id
 					}
-
 				} else {
-					nbd[0] += 1
+					nbd += 1
 					if fji > 1 {
-						lnbd[0] = fji
+						lnbd = fji
 					}
-					contourPrime = contours[lnbd[0]]
+					contourPrime = contours[lnbd]
 					from = from.Add(image.Point{1, 0})
 					contour.borderType = Hole
 					if contourPrime.borderType == Outer {
@@ -153,43 +151,20 @@ func findContours(img *SuzukiImage) map[int]*Contour {
 				}
 
 				p0 := image.Point{j, i}
-				fmt.Printf("pos %+v : %+v : %+v\n", p0, isOuter, isHole)
-				border := detectMove(img, p0, from, nbd[0], done)
+				border := detectMove(img, p0, from, nbd, done)
 				if len(border) == 0 {
 					border = append(border, p0)
-					img.Set(p0, -1*nbd[0])
+					img.Set(p0, -1*nbd)
 				}
 
-				//contour := NewContour(nbd)
-				//contour.isHole = isHole
-				//contour.isOuter = isOuter
-
 				contour.points = border
-				contour.id = nbd[0]
-				contours[nbd[0]] = contour
-
-				/*
-					fmt.Printf("Current %d\n", current)
-					if isHole && outerBorderNo != 0 {
-						contour.parentId = outerBorderNo
-					}
-
-					contour.parentId = lnbd
-
-					contours[nbd] = contour */
-				//contours = append(contours, contour)
-
-				//fmt.Printf("lnbd %d\n", lnbd)
-
-				//fmt.Printf("checkIsOuter %+v\n", checkIsOuter)
-				//outerBorderNo = nbd
-				//fmt.Printf("last outer %d last inner %d\n", outerBorderNo, innerBorderNo)
-
+				contour.id = nbd
+				contours[nbd] = contour
 			}
 			if fji != 0 && fji != 1 {
-				lnbd[0] = fji
-				if lnbd[0] < 0 {
-					lnbd[0] *= -1
+				lnbd = fji
+				if lnbd < 0 {
+					lnbd *= -1
 				}
 			}
 		}
@@ -235,5 +210,5 @@ func main() {
 		fmt.Printf("%d %d : %d\n", c.id, parentId, c.borderType)
 	}
 
-	fmt.Printf("NUm contours are %d\n", len(cont))
+	fmt.Printf("Num contours are %d\n", len(cont))
 }
