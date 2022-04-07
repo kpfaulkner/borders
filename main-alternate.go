@@ -531,7 +531,7 @@ func saveContourSliceImage(filename string, c map[int]*Contour, width int, heigh
 	}
 
 	for _, contour := range contours {
-		fmt.Printf("contour %d has %d points : isOuter %v :  isHole %v\n", count, len(contour.points), contour.isOuter, contour.isHole)
+		fmt.Printf("contour %d has %d points : borderType %d\n", count, len(contour.points), contour.borderType)
 		if len(contour.points) < minContourSize {
 			continue
 		}
