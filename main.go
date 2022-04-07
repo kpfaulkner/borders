@@ -29,12 +29,11 @@ func move(pixel image.Point, img *SuzukiImage, dir int) image.Point {
 			return newP
 		}
 	}
-
 	return image.Point{0, 0}
 }
 
-// returns index of dirDelta that matches direction taken.
-func fromTo(from image.Point, to image.Point) int {
+// calcDir returns index of dirDelta that matches direction taken.
+func calcDir(from image.Point, to image.Point) int {
 	delta := to.Sub(from)
 	for i, d := range dirDelta {
 		if d.X == delta.X && d.Y == delta.Y {
@@ -46,9 +45,10 @@ func fromTo(from image.Point, to image.Point) int {
 	panic("BOOOOOOM cant figure out direction")
 }
 
-func detectMove(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) []image.Point {
+// createBorder returns the slice of points making up the border/contour
+func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) []image.Point {
 	border := []image.Point{}
-	dir := fromTo(p0, p2)
+	dir := calcDir(p0, p2)
 	moved := clockwise(dir)
 	p1 := image.Point{0, 0}
 	for moved != dir {
@@ -68,7 +68,7 @@ func detectMove(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done 
 
 	done = []bool{false, false, false, false, false, false, false, false}
 	for {
-		dir = fromTo(p3, p2)
+		dir = calcDir(p3, p2)
 		moved = counterClockwise(dir)
 		p4 := image.Point{0, 0}
 		done = []bool{false, false, false, false, false, false, false, false}
@@ -151,7 +151,7 @@ func findContours(img *SuzukiImage) map[int]*Contour {
 				}
 
 				p0 := image.Point{j, i}
-				border := detectMove(img, p0, from, nbd, done)
+				border := createBorder(img, p0, from, nbd, done)
 				if len(border) == 0 {
 					border = append(border, p0)
 					img.Set(p0, -1*nbd)
@@ -175,16 +175,16 @@ func findContours(img *SuzukiImage) map[int]*Contour {
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	img := loadImage("image1.png")
-	//img := loadImage("big-test-image.png")
+	//img := loadImage("image1.png")
+	img := loadImage("big-test-image.png")
 
 	start := time.Now()
 	cont := findContours(img)
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	//saveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0, false)
-	//saveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0, false)
-	saveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0, false)
+	saveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0, false)
+	//saveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0, false)
 
 	contours := []*Contour{}
 	for _, cc := range cont {
