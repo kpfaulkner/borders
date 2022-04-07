@@ -1,4 +1,4 @@
-package main
+package border
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"sort"
 )
 
-func loadImage(filename string) *SuzukiImage {
+func LoadImage(filename string) *SuzukiImage {
 	f, err := os.Open(filename)
 	if err != nil {
 		panic("BOOM on file")
@@ -51,7 +51,7 @@ func loadImage(filename string) *SuzukiImage {
 	return si
 }
 
-func saveImage(filename string, si *SuzukiImage) error {
+func SaveImage(filename string, si *SuzukiImage) error {
 
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{si.Width, si.Height}
@@ -74,7 +74,7 @@ func saveImage(filename string, si *SuzukiImage) error {
 	return nil
 }
 
-func saveContoursImage(filename string, c *Contours, width int, height int, flipBook bool, minContourSize int, smallestToLargest bool) error {
+func SaveContoursImage(filename string, c *Contours, width int, height int, flipBook bool, minContourSize int, smallestToLargest bool) error {
 
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{width, height}
@@ -136,7 +136,7 @@ func saveContoursImage(filename string, c *Contours, width int, height int, flip
 		contours = append(contours, cc)
 
 		// only get length 11910
-		if len(cc.points) == 11910 {
+		if len(cc.Points) == 11910 {
 			//contours = append(contours, cc)
 		}
 
@@ -145,19 +145,19 @@ func saveContoursImage(filename string, c *Contours, width int, height int, flip
 	//contours := c.contours
 	if smallestToLargest {
 		sort.Slice(contours, func(i int, j int) bool {
-			return len(contours[i].points) < len(contours[j].points)
+			return len(contours[i].Points) < len(contours[j].Points)
 		})
 	}
 
 	for _, contour := range contours {
 
-		fmt.Printf("contour %d has %d points\n", count, len(contour.points))
-		if len(contour.points) < minContourSize {
+		fmt.Printf("contour %d has %d Points\n", count, len(contour.Points))
+		if len(contour.Points) < minContourSize {
 			continue
 		}
 		colourToUse := colours[colour]
 
-		for _, p := range contour.points {
+		for _, p := range contour.Points {
 			img.Set(p.X, p.Y, colourToUse)
 		}
 		colour++
@@ -180,7 +180,7 @@ func saveContoursImage(filename string, c *Contours, width int, height int, flip
 	return nil
 }
 
-func saveContourSliceImage(filename string, c map[int]*Contour, width int, height int, flipBook bool, minContourSize int, smallestToLargest bool) error {
+func SaveContourSliceImage(filename string, c map[int]*Contour, width int, height int, flipBook bool, minContourSize int, smallestToLargest bool) error {
 
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{width, height}
@@ -242,24 +242,24 @@ func saveContourSliceImage(filename string, c map[int]*Contour, width int, heigh
 	}
 
 	sort.Slice(contours, func(i int, j int) bool {
-		return contours[i].id < contours[j].id
+		return contours[i].Id < contours[j].Id
 	})
 
 	//contours := c.contours
 	if smallestToLargest {
 		sort.Slice(contours, func(i int, j int) bool {
-			return len(contours[i].points) < len(contours[j].points)
+			return len(contours[i].Points) < len(contours[j].Points)
 		})
 	}
 
 	for _, contour := range contours {
-		fmt.Printf("contour %d has %d points : borderType %d\n", count, len(contour.points), contour.borderType)
-		if len(contour.points) < minContourSize {
+		fmt.Printf("contour %d has %d Points : BorderType %d\n", count, len(contour.Points), contour.BorderType)
+		if len(contour.Points) < minContourSize {
 			continue
 		}
 		colourToUse := colours[colour]
 
-		for _, p := range contour.points {
+		for _, p := range contour.Points {
 			img.Set(p.X, p.Y, colourToUse)
 		}
 		colour++
@@ -289,7 +289,7 @@ func displayContourStats(c *Contours) {
 	longestLength := 0
 	averageLength := 0
 	for _, cc := range c.contours {
-		l := len(cc.points)
+		l := len(cc.Points)
 		if l > longestLength {
 			longestLength = l
 		}

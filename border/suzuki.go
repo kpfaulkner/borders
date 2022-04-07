@@ -1,4 +1,4 @@
-package main
+package border
 
 import (
 	"fmt"
@@ -29,22 +29,6 @@ func (si *SuzukiImage) Get(p image.Point) int {
 
 func (si *SuzukiImage) GetXY(x int, y int) int {
 	idx := y*si.Width + x
-
-	/*
-		// hack...  is somehow possible to get these conditions and blow up.
-		// returning 0 is a hack, but results seem good. Need to re-read (for the billionth time)
-		// the Suzuki papers etc.
-		if idx == -1 || idx < 0 {
-			fmt.Printf("BOOM !!! x %d : y %d\n", x, y)
-			return 0 // safe?
-		}
-
-		// ditto
-		if idx >= si.dataLen {
-			fmt.Printf("BOOM2 !!! x %d : y %d\n", x, y)
-			return 0 // safe?
-		}*/
-
 	return si.data[idx]
 }
 
