@@ -11,8 +11,8 @@ import (
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	//img := loadImage("image1.png")
-	img := border.LoadImage("big-test-image.png")
+	img := border.LoadImage("image1.png")
+	//img := border.LoadImage("big-test-image.png")
 
 	start := time.Now()
 	cont := border.FindContours(img)
@@ -32,18 +32,7 @@ func main() {
 	})
 
 	for _, c := range contours {
-		parentId := c.ParentId
-
-		if c.BorderType == border.Outer {
-			if c.ParentId != 1 {
-				parent := cont[c.ParentId]
-				if parent.BorderType == border.Outer {
-					// how is parent of an outer... and outer? switch to parent being 2?
-					parentId = 1
-				}
-			}
-		}
-		fmt.Printf("%d %d : %d\n", c.Id, parentId, c.BorderType)
+		fmt.Printf("%d %d : %d\n", c.Id, c.ParentId, c.BorderType)
 	}
 
 	fmt.Printf("Num contours are %d\n", len(cont))
