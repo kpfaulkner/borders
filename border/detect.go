@@ -43,7 +43,13 @@ func calcDir(from image.Point, to image.Point) int {
 }
 
 // createBorder returns the slice of Points making up the border/contour
-func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) []image.Point {
+// Also returns list of nbd's that are colliding with this. Can use to help create
+// tree with collision info later.
+func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) ([]image.Point, map[int]bool) {
+
+	// track which borders have conflicts
+	collisionIndicies := make(map[int]bool)
+
 	border := []image.Point{}
 	dir := calcDir(p0, p2)
 	moved := clockwise(dir)
@@ -58,7 +64,7 @@ func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, don
 	}
 
 	if p1.X == 0 && p1.Y == 0 {
-		return []image.Point{}
+		return []image.Point{}, collisionIndicies
 	}
 	p2 = p1
 	p3 := p0
@@ -78,6 +84,21 @@ func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, don
 			moved = counterClockwise(moved)
 		}
 
+		// detect if colliding with something else (ie not 0 nor 1)
+		curP3 := img.Get(p3)
+		if curP3 != 1 {
+			if curP3 < 0 {
+				curP3 *= -1
+			}
+
+			absNbd := nbd
+			if absNbd < 0 {
+				absNbd *= -1
+			}
+			collisionIndicies[curP3] = true
+			collisionIndicies[absNbd] = true
+		}
+
 		border = append(border, p3)
 		if p3.Y == img.Height-1 || done[2] {
 			img.Set(p3, -1*nbd)
@@ -92,7 +113,21 @@ func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, don
 		p2 = p3
 		p3 = p4
 	}
-	return border
+
+	return border, collisionIndicies
+}
+
+// addCollisionFlag mark contours with collisions with other contours.
+func addCollisionFlag(contours map[int]*Contour, collisionIndices map[int]bool) {
+
+	for contour1, _ := range collisionIndices {
+		for contour2, _ := range collisionIndices {
+			if contour1 != contour2 {
+				c1 := contours[contour1]
+				c1.ConflictingContours[contour2] = true
+			}
+		}
+	}
 }
 
 func FindContours(img *SuzukiImage) map[int]*Contour {
@@ -148,15 +183,15 @@ func FindContours(img *SuzukiImage) map[int]*Contour {
 				}
 
 				p0 := image.Point{j, i}
-				border := createBorder(img, p0, from, nbd, done)
+				border, collectionIndices := createBorder(img, p0, from, nbd, done)
 				if len(border) == 0 {
 					border = append(border, p0)
 					img.Set(p0, -1*nbd)
 				}
-
 				contour.Points = border
 				contour.Id = nbd
 				contours[nbd] = contour
+				addCollisionFlag(contours, collectionIndices)
 			}
 			if fji != 0 && fji != 1 {
 				lnbd = fji

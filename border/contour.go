@@ -12,13 +12,15 @@ type Contour struct {
 	Id         int
 	BorderType int
 	ParentId   int
+
+	ConflictingContours map[int]bool // hate to use maps here... but want uniqueness
 }
 
 func NewContour(id int) *Contour {
 	c := Contour{}
 	c.Id = id
-	//c.Points = make([]image.Point, 500, 1000)
 	c.BorderType = Hole
+	c.ConflictingContours = make(map[int]bool)
 	return &c
 }
 

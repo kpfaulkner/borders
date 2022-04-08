@@ -1,10 +1,12 @@
 # borders
 Border 
 
-This is an attempted implementation of the "Parallel border tracking in binary images using GPUs" paper but instead of GPUs
-it is focusing on concurrency in CPU space.
+This is an implementation of the Suzuki + Abe "Topological Structural Analysis of Digitized Binary Images by Border Following"
+( http://pdf.xuebalib.com:1262/xuebalib.com.17233.pdf )
 
-The original and popular Suzuki algorithm is a strictly serialised approach, now with more cores, let's try something to flex the cost of the CPUs :P
+This implementation is based off the original paper as well as being inspired by other papers/implementations/ideas from across the web.
+
+
 
 
 
