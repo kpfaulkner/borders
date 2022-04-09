@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/kpfaulkner/borders/border"
@@ -11,30 +10,24 @@ import (
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	//img := border.LoadImage("image1.png")
+	img := border.LoadImage("image1.png")
 	//img := border.LoadImage("tiny.png")
-	img := border.LoadImage("big-test-image.png")
+	//img := border.LoadImage("big-test-image.png")
 
 	start := time.Now()
 	cont := border.FindContours(img)
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	//saveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0, false)
-	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0, false)
-	//saveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0, false)
+	//border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
+	border.SaveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0)
 
-	contours := []*border.Contour{}
-	for _, cc := range cont {
-		contours = append(contours, cc)
-	}
+	/*
+		for _, c := range contours {
+			fmt.Printf("%d %d : %d : %+v : %d\n", c.Id, c.ParentId, c.BorderType, c.ConflictingContours, len(c.Children))
+		}
 
-	sort.Slice(contours, func(i int, j int) bool {
-		return contours[i].Id < contours[j].Id
-	})
+		fmt.Printf("Num contours are %d\n", len(cont))
 
-	for _, c := range contours {
-		fmt.Printf("%d %d : %d : %+v\n", c.Id, c.ParentId, c.BorderType, c.ConflictingContours)
-	}
-
-	fmt.Printf("Num contours are %d\n", len(cont))
+	*/
 }

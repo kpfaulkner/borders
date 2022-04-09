@@ -130,9 +130,9 @@ func addCollisionFlag(contours map[int]*Contour, collisionIndices map[int]bool) 
 	}
 }
 
-func FindContours(img *SuzukiImage) map[int]*Contour {
+func FindContours(img *SuzukiImage) *Contour {
 
-	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
+	// defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	nbd := 1
 	lnbd := 1
 
@@ -149,23 +149,23 @@ func FindContours(img *SuzukiImage) map[int]*Contour {
 		lnbd = 1
 		for j := 0; j < width; j++ {
 			fji := img.GetXY(j, i)
-
-			isOuter := img.GetXY(j, i) == 1 && (j == 0 || img.GetXY(j-1, i) == 0)
-			isHole := img.GetXY(j, i) >= 1 && (j == width-1 || img.GetXY(j+1, i) == 0)
+			isOuter := fji == 1 && (j == 0 || img.GetXY(j-1, i) == 0)
+			isHole := fji >= 1 && (j == width-1 || img.GetXY(j+1, i) == 0)
 			if isOuter || isHole {
 
 				var contourPrime *Contour
 				contour := NewContour(1)
 				from := image.Point{j, i}
+				parentId := 0
 				if isOuter {
 					nbd += 1
 					from = from.Sub(image.Point{1, 0})
 					contour.BorderType = Outer
 					contourPrime = contours[lnbd]
 					if contourPrime.BorderType == Outer {
-						contour.ParentId = contourPrime.ParentId
+						parentId = contourPrime.ParentId
 					} else {
-						contour.ParentId = contourPrime.Id
+						parentId = contourPrime.Id
 					}
 				} else {
 					nbd += 1
@@ -176,9 +176,9 @@ func FindContours(img *SuzukiImage) map[int]*Contour {
 					from = from.Add(image.Point{1, 0})
 					contour.BorderType = Hole
 					if contourPrime.BorderType == Outer {
-						contour.ParentId = contourPrime.Id
+						parentId = contourPrime.Id
 					} else {
-						contour.ParentId = contourPrime.ParentId
+						parentId = contourPrime.ParentId
 					}
 				}
 
@@ -188,6 +188,13 @@ func FindContours(img *SuzukiImage) map[int]*Contour {
 					border = append(border, p0)
 					img.Set(p0, -1*nbd)
 				}
+
+				if parentId != 0 {
+					parent := contours[parentId]
+					parent.Children = append(parent.Children, contour)
+					contour.Parent = contours[parentId]
+				}
+				contour.ParentId = parentId
 				contour.Points = border
 				contour.Id = nbd
 				contours[nbd] = contour
@@ -201,5 +208,5 @@ func FindContours(img *SuzukiImage) map[int]*Contour {
 			}
 		}
 	}
-	return contours
+	return contours[1]
 }

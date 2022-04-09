@@ -180,7 +180,7 @@ func SaveContoursImage(filename string, c *Contours, width int, height int, flip
 	return nil
 }
 
-func SaveContourSliceImage(filename string, c map[int]*Contour, width int, height int, flipBook bool, minContourSize int, smallestToLargest bool) error {
+func SaveContourSliceImage(filename string, c *Contour, width int, height int, flipBook bool, minContourSize int) error {
 
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{width, height}
@@ -194,33 +194,16 @@ func SaveContourSliceImage(filename string, c map[int]*Contour, width int, heigh
 		}
 	}
 
-	_ = []color.RGBA{
-		{50, 0, 0, 255},
-		{100, 0, 0, 255},
-		{150, 0, 0, 255},
-		{200, 0, 0, 255},
-		{250, 0, 0, 255},
-		{50, 50, 0, 255},
-		{100, 50, 0, 255},
-		{150, 50, 0, 255},
-		{200, 50, 0, 255},
-		{250, 50, 0, 255},
-		{50, 100, 0, 255},
-		{100, 100, 0, 255},
-		{150, 100, 0, 255},
-		{200, 100, 0, 255},
-		{250, 100, 0, 255},
-		{50, 150, 0, 255},
-		{100, 150, 0, 255},
-		{150, 150, 0, 255},
-		{200, 150, 0, 255},
-		{250, 150, 0, 255},
-		{50, 200, 0, 255},
-		{100, 200, 0, 255},
-		{150, 200, 0, 255},
-		{200, 200, 0, 255},
-		{250, 200, 0, 255},
-	}
+	colour := 0
+	count := 0
+
+	drawContour(img, c, flipBook, minContourSize, colour, &count, filename)
+	f, _ := os.Create(filename)
+	png.Encode(f, img)
+	return nil
+}
+
+func drawContour(img *image.RGBA, c *Contour, flipBook bool, minContourSize int, colour int, count *int, filename string) error {
 
 	colours := []color.RGBA{
 		{255, 0, 0, 255},
@@ -233,33 +216,11 @@ func SaveContourSliceImage(filename string, c map[int]*Contour, width int, heigh
 	}
 
 	max := len(colours)
-	colour := 0
-	count := 0
 
-	contours := []*Contour{}
-	for _, cc := range c {
-		contours = append(contours, cc)
-	}
-
-	sort.Slice(contours, func(i int, j int) bool {
-		return contours[i].Id < contours[j].Id
-	})
-
-	//contours := c.contours
-	if smallestToLargest {
-		sort.Slice(contours, func(i int, j int) bool {
-			return len(contours[i].Points) < len(contours[j].Points)
-		})
-	}
-
-	for _, contour := range contours {
-		fmt.Printf("contour %d has %d Points : BorderType %d\n", count, len(contour.Points), contour.BorderType)
-		if len(contour.Points) < minContourSize {
-			continue
-		}
+	// draw contour itself.
+	if len(c.Points) > 0 && len(c.Points) > minContourSize {
 		colourToUse := colours[colour]
-
-		for _, p := range contour.Points {
+		for _, p := range c.Points {
 			img.Set(p.X, p.Y, colourToUse)
 		}
 		colour++
@@ -269,16 +230,23 @@ func SaveContourSliceImage(filename string, c map[int]*Contour, width int, heigh
 
 		// save new image per contour added...  crazy
 		if flipBook {
-			fn := fmt.Sprintf("%s-%d.png", filename, count)
+			fn := fmt.Sprintf("%s-%d.png", filename, *count)
 			f, _ := os.Create(fn)
 			png.Encode(f, img)
 			f.Close()
 		}
-		count++
+		*count = *count + 1
 	}
 
-	f, _ := os.Create(filename)
-	png.Encode(f, img)
+	for _, child := range c.Children {
+		colour++
+		if colour >= max {
+			colour = 0
+		}
+		*count = *count + 1
+		drawContour(img, child, flipBook, minContourSize, colour, count, filename)
+	}
+
 	return nil
 }
 

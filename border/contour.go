@@ -8,11 +8,12 @@ const (
 )
 
 type Contour struct {
-	Points     []image.Point
-	Id         int
-	BorderType int
-	ParentId   int
-
+	Points              []image.Point
+	Id                  int
+	BorderType          int
+	ParentId            int
+	Parent              *Contour
+	Children            []*Contour
 	ConflictingContours map[int]bool // hate to use maps here... but want uniqueness
 }
 
