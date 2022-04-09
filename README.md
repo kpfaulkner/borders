@@ -18,8 +18,12 @@ Easiest approach is to have a black and white png file and execute:
 
 ```
 img := border.LoadImage("test.png")
-contour := border.FindContours(img)   // contour is root node
-border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)  // this will save contours in contour.png
+
+// contour is root node
+contour := border.FindContours(img)   
+
+// this will save contours in contour.png
+border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0) 
 ```
 
 
