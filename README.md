@@ -23,7 +23,7 @@ img := border.LoadImage("test.png")
 contour := border.FindContours(img)   
 
 // this will save contours in contour.png
-border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0) 
+border.SaveContourSliceImage("contour.png", contour, img.Width, img.Height, false, 0) 
 ```
 
 
