@@ -19,8 +19,8 @@ func main() {
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	//saveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0, false)
-	//border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
-	border.SaveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0)
+	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
+	//border.SaveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0)
 
 	/*
 		for _, c := range contours {
