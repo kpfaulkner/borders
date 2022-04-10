@@ -5,17 +5,22 @@ import (
 )
 
 var (
+
+	// dirDelta determines which direction will we move based on the direction (0-7) index
 	dirDelta = []image.Point{{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}}
 )
 
+// clockwise determines direction if we have 'dir' and turn clockwise
 func clockwise(dir int) int {
 	return ((dir + 1) % 8)
 }
 
+// counterClockwise determines direction if we have 'dir' and turn counterclockwise
 func counterClockwise(dir int) int {
 	return (dir + 7) % 8
 }
 
+// move moves the current point (pixel) in the direction 'dir'
 func move(pixel image.Point, img *SuzukiImage, dir int) image.Point {
 	newP := pixel.Add(dirDelta[dir])
 	width := img.Width
@@ -38,7 +43,7 @@ func calcDir(from image.Point, to image.Point) int {
 		}
 	}
 
-	// unsure... blow up.
+	// unsure... blow up for now.
 	panic("BOOOOOOM cant figure out direction")
 }
 
@@ -119,7 +124,6 @@ func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, don
 
 // addCollisionFlag mark contours with collisions with other contours.
 func addCollisionFlag(contours map[int]*Contour, collisionIndices map[int]bool) {
-
 	for contour1, _ := range collisionIndices {
 		for contour2, _ := range collisionIndices {
 			if contour1 != contour2 {
@@ -130,9 +134,12 @@ func addCollisionFlag(contours map[int]*Contour, collisionIndices map[int]bool) 
 	}
 }
 
+// FindContours takes a SuzukiImage (basic 2d slice) and determines the Contours that are present.
+// It returns the single parent contour which in turn has all other contours as children or further
+// generations.
 func FindContours(img *SuzukiImage) *Contour {
 
-	// defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
+	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	nbd := 1
 	lnbd := 1
 

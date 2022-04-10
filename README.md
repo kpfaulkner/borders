@@ -17,7 +17,7 @@ The API is NOT stable yet and is in progress.
 Easiest approach is to have a black and white png file and execute:
 
 ```
-img := border.LoadImage("test.png")
+img,_ := border.LoadImage("test.png")
 
 // contour is root node
 contour := border.FindContours(img)   

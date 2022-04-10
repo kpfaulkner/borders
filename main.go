@@ -10,9 +10,12 @@ import (
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	img := border.LoadImage("image1.png")
+	//img := border.LoadImage("image1.png")
 	//img := border.LoadImage("tiny.png")
-	//img := border.LoadImage("big-test-image.png")
+	img, err := border.LoadImage("big-test-image.png")
+	if err != nil {
+		panic("BOOM " + err.Error())
+	}
 
 	start := time.Now()
 	cont := border.FindContours(img)

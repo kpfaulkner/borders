@@ -7,16 +7,33 @@ const (
 	Hole  = 1
 )
 
+// Contour represents a single contour/border extracted from an image.
+// It also tracks its parents and children.
 type Contour struct {
-	Points              []image.Point
-	Id                  int
-	BorderType          int
-	ParentId            int
-	Parent              *Contour
-	Children            []*Contour
+
+	// Points making up the contour
+	Points []image.Point
+
+	Id int
+
+	// Outer or Hole.
+	BorderType int
+
+	// Id of parent
+	ParentId int
+
+	// Parent links to contours parent
+	Parent *Contour
+
+	// Children links to contours children
+	Children []*Contour
+
+	// ConflictingContours is a map of contours that we KNOW we conflict with. This may be the parent or other
+	// siblings
 	ConflictingContours map[int]bool // hate to use maps here... but want uniqueness
 }
 
+// NewContour create new contour
 func NewContour(id int) *Contour {
 	c := Contour{}
 	c.Id = id
@@ -25,25 +42,8 @@ func NewContour(id int) *Contour {
 	return &c
 }
 
+// AddPoint adds a point (image.Point) to the contour
 func (c *Contour) AddPoint(p image.Point) error {
 	c.Points = append(c.Points, p)
-	return nil
-}
-
-type Contours struct {
-	contours map[int]*Contour
-}
-
-func NewContours() *Contours {
-	c := Contours{}
-	c.contours = make(map[int]*Contour, 100)
-	return &c
-}
-
-func (c *Contours) AddPointToContourId(id int, p image.Point) error {
-	if _, has := c.contours[id]; !has {
-		c.contours[id] = NewContour(id)
-	}
-	c.contours[id].AddPoint(p)
 	return nil
 }
