@@ -12,7 +12,7 @@ var (
 
 // clockwise determines direction if we have 'dir' and turn clockwise
 func clockwise(dir int) int {
-	return ((dir + 1) % 8)
+	return (dir + 1) % 8
 }
 
 // counterClockwise determines direction if we have 'dir' and turn counterclockwise
@@ -123,9 +123,15 @@ func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, don
 }
 
 // addCollisionFlag mark contours with collisions with other contours.
-func addCollisionFlag(contours map[int]*Contour, collisionIndices map[int]bool) {
-	for contour1, _ := range collisionIndices {
-		for contour2, _ := range collisionIndices {
+func addCollisionFlag(contour *Contour, parentId int, contours map[int]*Contour, collisionIndices map[int]bool) {
+	for contour1 := range collisionIndices {
+
+		// quick indicator to say colliding with parent.
+		if contour1 == parentId {
+			contour.ParentCollision = true
+		}
+
+		for contour2 := range collisionIndices {
 			if contour1 != contour2 {
 				c1 := contours[contour1]
 				c1.ConflictingContours[contour2] = true
@@ -205,7 +211,7 @@ func FindContours(img *SuzukiImage) *Contour {
 				contour.Points = border
 				contour.Id = nbd
 				contours[nbd] = contour
-				addCollisionFlag(contours, collectionIndices)
+				addCollisionFlag(contour, parentId, contours, collectionIndices)
 			}
 			if fji != 0 && fji != 1 {
 				lnbd = fji
