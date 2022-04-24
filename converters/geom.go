@@ -9,31 +9,34 @@ import (
 	"github.com/peterstace/simplefeatures/geom"
 )
 
+/*
 type PointConverter interface {
 	Convert(X float64, Y float64) (float64, float64)
-}
+} */
 
-func NewLatLongConverter(offsetX float64, offsetY float64, scale int) func(X float64, Y float64) (float64, float64) {
+type PointConverter func(x float64, y float64) (float64, float64)
+
+func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, scale int) func(X float64, Y float64) (float64, float64) {
 	latLongN := math.Pow(2, float64(scale))
 	f := func(x float64, y float64) (float64, float64) {
-		long, lat := slippyCoordsToLongLat(offsetX, offsetY, x, y, latLongN)
+		long, lat := slippyCoordsToLongLat(slippyXOffset, slippyYOffset, x, y, latLongN)
 		return long, lat
 	}
 	return f
 }
 
 // ConvertContourToGeom converts the contours (set of x/y coords) to geometries commonly used in the GIS space
-func ConvertContourToMultiPolygon(c *border.Contour, converters ...PointConverter) (*geom.MultiPolygon, error) {
+func ConvertContourToMultiPolygon(c *border.Contour, pointConverters ...PointConverter) (*geom.MultiPolygon, error) {
 	root := geom.MultiPolygon{}
 
-	_, _ = convertContourToPolygon(c, converters)
+	_, _ = convertContourToPolygon(c, pointConverters)
 	return &root, nil
 }
 
 // convertContourToPolygon converts the contours (set of x/y coords) to Polygon (and all children as well)
-func convertContourToPolygon(c *border.Contour, converters []PointConverter) (*geom.Polygon, error) {
+func convertContourToPolygon(c *border.Contour, pointConverters []PointConverter) (*geom.Polygon, error) {
 
-	seq := pointsToSequence(c.Points, converters)
+	seq := pointsToSequence(c.Points, pointConverters)
 
 	ls, err := geom.NewLineString(seq)
 	if err != nil {
@@ -47,7 +50,11 @@ func convertContourToPolygon(c *border.Contour, converters []PointConverter) (*g
 		return nil, err
 	}
 
-	fmt.Printf("XXXXXX poly %s\n", p.AsText())
+	p2, err := p.Simplify(0.00002, geom.DisableAllValidations)
+	if err != nil {
+		fmt.Printf("BOOM simplify error %s\n", err.Error())
+	}
+	fmt.Printf("XXXXXX poly %s\n", p2.AsText())
 	return nil, nil
 }
 
@@ -60,7 +67,7 @@ func pointsToSequence(points []image.Point, converters []PointConverter) geom.Se
 
 		// run through converters.
 		for _, converter := range converters {
-			newX, newY := converter.Convert(x, y)
+			newX, newY := converter(x, y)
 			x, y = newX, newY
 		}
 
@@ -68,17 +75,23 @@ func pointsToSequence(points []image.Point, converters []PointConverter) geom.Se
 		seq[index+1] = y
 		index += 2
 	}
-	seq[index] = float64(points[0].X)
-	seq[index+1] = float64(points[0].Y)
+
+	seq[index] = seq[0]
+	seq[index+1] = seq[1]
 	return geom.NewSequence(seq, geom.DimXY)
 }
 
-func slippyCoordsToLongLat(offsetX float64, offsetY float64, xTile float64, yTile float64, latLongN float64) (float64, float64) {
+// slippyCoordsToLongLat converts to lat/long... and requires the slippy offset of top left corner of area.
+func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile float64, yTile float64, latLongN float64) (float64, float64) {
 	//n := math.Pow(2, float64(scale))
-	longDeg := (xTile/latLongN)*360.0 - 180.0
-	latRad := math.Atan(math.Sinh(math.Pi - (yTile/latLongN)*2*math.Pi))
+
+	x := xTile + slippyXOffset
+	y := yTile + slippyYOffset
+	longDeg := (x/latLongN)*360.0 - 180.0
+	latRad := math.Atan(math.Sinh(math.Pi - (y/latLongN)*2*math.Pi))
 	latDeg := latRad * (180.0 / math.Pi)
-	return offsetY + longDeg, offsetX + latDeg
+
+	return longDeg, latDeg
 }
 
 // ConvertContourToMultiPolygonLatLong converts the contours (set of x/y coords) to geometries commonly used in the GIS space
@@ -86,6 +99,6 @@ func slippyCoordsToLongLat(offsetX float64, offsetY float64, xTile float64, yTil
 func ConvertContourToMultiPolygonLatLong(c *border.Contour, scale int, offsetX float64, offsetY float64) (*geom.MultiPolygon, error) {
 	root := geom.MultiPolygon{}
 
-	_, _ = convertContourToPolygon(c)
+	//_, _ = convertContourToPolygon(c)
 	return &root, nil
 }
