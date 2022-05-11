@@ -9,11 +9,6 @@ import (
 	"github.com/peterstace/simplefeatures/geom"
 )
 
-/*
-type PointConverter interface {
-	Convert(X float64, Y float64) (float64, float64)
-} */
-
 type PointConverter func(x float64, y float64) (float64, float64)
 
 func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, scale int) func(X float64, Y float64) (float64, float64) {
@@ -25,37 +20,56 @@ func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, s
 	return f
 }
 
-// ConvertContourToGeom converts the contours (set of x/y coords) to geometries commonly used in the GIS space
-func ConvertContourToMultiPolygon(c *border.Contour, pointConverters ...PointConverter) (*geom.MultiPolygon, error) {
-	root := geom.MultiPolygon{}
+// ConvertContourToPolygon converts the contours (set of x/y coords) to geometries commonly used in the GIS space
+func ConvertContourToPolygon(c *border.Contour, pointConverters ...PointConverter) (*geom.Polygon, error) {
 
-	_, _ = convertContourToPolygon(c, pointConverters)
-	return &root, nil
+	ls := []geom.LineString{}
+
+	err := convertContourToLineStrings(c, pointConverters, &ls)
+	if err != nil {
+		return nil, err
+	}
+
+	p, err := geom.NewPolygon(ls, geom.DisableAllValidations)
+	if err != nil {
+		return nil, err
+	}
+
+	// will calculate the threshold later. For now, 0.0002 is a reasonable value
+	p2, err := p.Simplify(0.0002, geom.DisableAllValidations)
+	if err != nil {
+		return nil, err
+	}
+
+	return &p2, nil
 }
 
-// convertContourToPolygon converts the contours (set of x/y coords) to Polygon (and all children as well)
-func convertContourToPolygon(c *border.Contour, pointConverters []PointConverter) (*geom.Polygon, error) {
+// convertContourToLineStrings
+func convertContourToLineStrings(c *border.Contour, pointConverters []PointConverter, lineStrings *[]geom.LineString) error {
 
 	seq := pointsToSequence(c.Points, pointConverters)
 
-	ls, err := geom.NewLineString(seq)
-	if err != nil {
-		return nil, err
+	if seq.Length() > 2 {
+		ls, err := geom.NewLineString(seq)
+		if err != nil {
+			fmt.Printf("seq len %d\n", seq.Length())
+			return err
+		}
+
+		// if linestring only has 1 value, then ditch.
+		if seq.Length() >= 1 {
+			*lineStrings = append(*lineStrings, ls)
+		}
+	}
+	for _, child := range c.Children {
+		err := convertContourToLineStrings(child, pointConverters, lineStrings)
+		if err != nil {
+			fmt.Printf("XXX err2 %s\n", err.Error())
+			return err
+		}
 	}
 
-	//fmt.Printf("XXXXXXXXX LS %s\n", ls.AsText())
-	p, err := geom.NewPolygon([]geom.LineString{ls}, geom.DisableAllValidations)
-	if err != nil {
-		fmt.Printf("XXX err1 %s\n", err.Error())
-		return nil, err
-	}
-
-	p2, err := p.Simplify(0.00002, geom.DisableAllValidations)
-	if err != nil {
-		fmt.Printf("BOOM simplify error %s\n", err.Error())
-	}
-	fmt.Printf("XXXXXX poly %s\n", p2.AsText())
-	return nil, nil
+	return nil
 }
 
 func pointsToSequence(points []image.Point, converters []PointConverter) geom.Sequence {
@@ -92,13 +106,4 @@ func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile f
 	latDeg := latRad * (180.0 / math.Pi)
 
 	return longDeg, latDeg
-}
-
-// ConvertContourToMultiPolygonLatLong converts the contours (set of x/y coords) to geometries commonly used in the GIS space
-// and converted to latitude/longitude
-func ConvertContourToMultiPolygonLatLong(c *border.Contour, scale int, offsetX float64, offsetY float64) (*geom.MultiPolygon, error) {
-	root := geom.MultiPolygon{}
-
-	//_, _ = convertContourToPolygon(c)
-	return &root, nil
 }
