@@ -38,6 +38,9 @@ type Contour struct {
 	// ConflictingContours is a map of contours that we KNOW we conflict with. This may be the parent or other
 	// siblings
 	ConflictingContours map[int]bool // hate to use maps here... but want uniqueness
+
+	// usable or not. Not filtering out but marking that we may not use it. (say if we're conflicting with another contour)
+	Usable bool
 }
 
 // NewContour create new contour
@@ -46,6 +49,7 @@ func NewContour(id int) *Contour {
 	c.Id = id
 	c.BorderType = Hole
 	c.ConflictingContours = make(map[int]bool)
+	c.Usable = true
 	return &c
 }
 

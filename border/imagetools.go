@@ -18,6 +18,8 @@ const (
 
 // LoadImage loads a PNG and returns a SuzukiImage.
 // This may change since SuzukiImage may not really be required.
+// erode flag forces the eroding of the image before converting to a SuzukiImage.
+// This is to remove any "spikes" that may appear in the generated boundary.
 func LoadImage(filename string) (*SuzukiImage, error) {
 	f, err := os.Open(filename)
 	if err != nil {

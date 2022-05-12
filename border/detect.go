@@ -1,6 +1,7 @@
 package border
 
 import (
+	"fmt"
 	"image"
 )
 
@@ -119,7 +120,64 @@ func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, don
 		p3 = p4
 	}
 
-	return border, collisionIndicies
+	/*
+		// hack... if first doesn't equal last... then append a copy to end.
+		if border[0].X != border[len(border)-1].X || border[0].Y != border[len(border)-1].Y {
+			border = append(border, image.Point{border[0].X, border[0].Y})
+		} */
+	//border = border[1:]
+
+	//b, err := filterBorderThroughStackProcessing(border)
+
+	/*
+		b, err := filterBorderThroughMapProcessing(border)
+		if err != nil {
+			fmt.Printf("ERROR with filtering : %s\n", err.Error())
+		} */
+	b := border
+	return b, collisionIndicies
+}
+
+func filterBorderThroughMapProcessing(border []image.Point) ([]image.Point, error) {
+
+	// point to index.
+	pointsIndex := make(map[image.Point]int)
+	newBorder := []image.Point{}
+	for _, currentPoint := range border {
+
+		if index, ok := pointsIndex[currentPoint]; ok {
+			//  already have point at index... so delete everything between index and end of newBorder slice.
+
+			if index == 129 {
+				fmt.Printf("here\n")
+			}
+			newBorder = newBorder[:index]
+		} else {
+			newBorder = append(newBorder, currentPoint)
+			pointsIndex[currentPoint] = len(newBorder) - 1
+		}
+	}
+
+	return newBorder, nil
+}
+
+func filterBorderThroughStackProcessing(border []image.Point) ([]image.Point, error) {
+
+	// add first 2...  so checking can happen.
+	newBorder := []image.Point{border[0], border[1]}
+	previousNewIndex := 0
+	for _, currentPoint := range border[2:] {
+		// check if currentPoint is same as previous... if so, modify
+		if newBorder[previousNewIndex] == currentPoint {
+			newBorder = newBorder[:len(newBorder)-1]
+			previousNewIndex--
+		} else {
+			newBorder = append(newBorder, currentPoint)
+			previousNewIndex++
+		}
+	}
+
+	return newBorder, nil
 }
 
 // addCollisionFlag mark contours with collisions with other contours.
