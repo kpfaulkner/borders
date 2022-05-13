@@ -7,6 +7,9 @@ import (
 	"image/png"
 	_ "image/png"
 	"os"
+
+	"github.com/anthonynsimon/bild/effect"
+	"github.com/anthonynsimon/bild/imgio"
 )
 
 const (
@@ -20,7 +23,10 @@ const (
 // This may change since SuzukiImage may not really be required.
 // erode flag forces the eroding of the image before converting to a SuzukiImage.
 // This is to remove any "spikes" that may appear in the generated boundary.
-func LoadImage(filename string) (*SuzukiImage, error) {
+func LoadImage(filename string, erode bool) (*SuzukiImage, error) {
+
+	erodeFactor := 0.8
+
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -30,6 +36,15 @@ func LoadImage(filename string) (*SuzukiImage, error) {
 	img, _, err := image.Decode(f)
 	if err != nil {
 		return nil, err
+	}
+
+	if erode {
+
+		erodeFactor = 0.8
+		img = effect.Erode(img, erodeFactor)
+		if err := imgio.Save("eroded.png", img, imgio.PNGEncoder()); err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	// need border to be black. Pad edges with 1 black pixel
@@ -116,8 +131,15 @@ func drawContour(img *image.RGBA, c *Contour, flipBook bool, minContourSize int,
 
 	max := len(colours)
 
+	fmt.Printf("point count %d\n", len(c.Points))
+
+	if c.BorderType == Outer {
+		colour = 0
+	}
+
 	// draw contour itself.
 	if len(c.Points) > 0 && len(c.Points) > minContourSize {
+
 		colourToUse := colours[colour]
 		for _, p := range c.Points {
 			img.Set(p.X, p.Y, colourToUse)

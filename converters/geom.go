@@ -38,7 +38,6 @@ func ConvertContourToPolygon(c *border.Contour, filterOutConflictingBoundaries b
 	}
 
 	mp, err := geom.NewMultiPolygon(polygons)
-
 	if err != nil {
 		fmt.Printf("Cannot make multipolygon: %s\n", err.Error())
 		return nil, err
@@ -46,9 +45,10 @@ func ConvertContourToPolygon(c *border.Contour, filterOutConflictingBoundaries b
 
 	if simplify {
 
-		tolerance := generateSimplifyTolerance(21)
+		tolerance := generateSimplifyTolerance(22)
 		fmt.Printf("XXX tolerance %f\n", tolerance)
-		tolerance = 0.0002
+		// tolerance 5.233066
+		tolerance = 0.00015
 		// will calculate the threshold later. For now, 0.0002 is a reasonable value
 		p2, err := mp.Simplify(tolerance, geom.DisableAllValidations)
 		if err != nil {
@@ -105,6 +105,7 @@ func convertContourToPolygons(c *border.Contour, pointConverters []PointConverte
 			return err
 		}
 
+		//*outerLS = outerLS.Simplify(0.0002)
 		lineStrings = append(lineStrings, *outerLS)
 
 		// now get children... (holes).

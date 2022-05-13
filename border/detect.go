@@ -1,8 +1,8 @@
 package border
 
 import (
-	"fmt"
 	"image"
+	"log"
 )
 
 var (
@@ -120,22 +120,20 @@ func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, don
 		p3 = p4
 	}
 
-	/*
-		// hack... if first doesn't equal last... then append a copy to end.
-		if border[0].X != border[len(border)-1].X || border[0].Y != border[len(border)-1].Y {
-			border = append(border, image.Point{border[0].X, border[0].Y})
-		} */
-	//border = border[1:]
+	return border, collisionIndicies
 
-	//b, err := filterBorderThroughStackProcessing(border)
+	var err error
+	// only filter border is > 10 points
 
-	/*
-		b, err := filterBorderThroughMapProcessing(border)
-		if err != nil {
-			fmt.Printf("ERROR with filtering : %s\n", err.Error())
-		} */
-	b := border
-	return b, collisionIndicies
+	border, err = filterBorderThroughMapProcessing(border)
+	if err != nil {
+		log.Fatalf("ERROR with filtering : %s\n", err.Error())
+	}
+
+	//fmt.Printf("orig border $+v\n", border)
+	//fmt.Printf("filtered border $+v\n", b)
+
+	return border, collisionIndicies
 }
 
 func filterBorderThroughMapProcessing(border []image.Point) ([]image.Point, error) {
@@ -147,10 +145,6 @@ func filterBorderThroughMapProcessing(border []image.Point) ([]image.Point, erro
 
 		if index, ok := pointsIndex[currentPoint]; ok {
 			//  already have point at index... so delete everything between index and end of newBorder slice.
-
-			if index == 129 {
-				fmt.Printf("here\n")
-			}
 			newBorder = newBorder[:index]
 		} else {
 			newBorder = append(newBorder, currentPoint)
