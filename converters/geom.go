@@ -45,17 +45,15 @@ func ConvertContourToPolygon(c *border.Contour, filterOutConflictingBoundaries b
 
 	if simplify {
 
-		tolerance := generateSimplifyTolerance(22)
-		fmt.Printf("XXX tolerance %f\n", tolerance)
-		// tolerance 5.233066
-		tolerance = 0.00015
+		// should calculate tolerance but seems way off. Keeping to 0.00015 for tests so far.
+		//tolerance := generateSimplifyTolerance(22)
+		tolerance := 0.00015
 		// will calculate the threshold later. For now, 0.0002 is a reasonable value
 		p2, err := mp.Simplify(tolerance, geom.DisableAllValidations)
 		if err != nil {
 			fmt.Printf("Cannot simplify polygon: %s\n", err.Error())
 			return nil, err
 		}
-
 		return &p2, nil
 	}
 	return &mp, nil
@@ -83,12 +81,6 @@ func generateLineString(points []image.Point, pointConverters []PointConverter) 
 func convertContourToPolygons(c *border.Contour, pointConverters []PointConverter, polygons *[]geom.Polygon, filterConflicts bool) error {
 
 	// artificial bailout.
-
-	// if conflicts with parents...  then don't process nor the children
-	//if c.ParentCollision || !c.Usable {
-	/*if c.ParentCollision {
-		return nil
-	} */
 
 	// mark children with conflicts as unusable
 	// any siblings that we conflict with, mark as unusable. This means that when multiple siblings (that conflict)

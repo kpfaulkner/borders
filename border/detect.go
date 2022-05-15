@@ -123,15 +123,10 @@ func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, don
 	return border, collisionIndicies
 
 	var err error
-	// only filter border is > 10 points
-
 	border, err = filterBorderThroughMapProcessing(border)
 	if err != nil {
 		log.Fatalf("ERROR with filtering : %s\n", err.Error())
 	}
-
-	//fmt.Printf("orig border $+v\n", border)
-	//fmt.Printf("filtered border $+v\n", b)
 
 	return border, collisionIndicies
 }
