@@ -224,7 +224,7 @@ func pointsToSequence(points []image.Point, converters []PointConverter) geom.Se
 	seq := make([]float64, s, s)
 	index := 0
 	for _, origP := range points {
-		x, y := float64(origP.X), float64(origP.Y)
+		x, y := float64(origP.X)-0.5, float64(origP.Y)-0.5 // based off testing. Need to check WHY!??!
 
 		// run through converters.
 		for _, converter := range converters {

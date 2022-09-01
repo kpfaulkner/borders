@@ -39,7 +39,6 @@ func LoadImage(filename string, erode bool) (*SuzukiImage, error) {
 	}
 
 	if erode {
-
 		erodeFactor = 0.8
 		img = effect.Erode(img, erodeFactor)
 		if err := imgio.Save("eroded.png", img, imgio.PNGEncoder()); err != nil {
@@ -79,7 +78,7 @@ func SaveImage(filename string, si *SuzukiImage) error {
 	for x := 0; x < si.Width; x++ {
 		for y := 0; y < si.Height; y++ {
 			p := si.GetXY(x, y)
-			if p != 0 && p != 1 {
+			if p == 1 {
 				img.Set(x, y, color.White)
 			} else {
 				img.Set(x, y, color.Black)

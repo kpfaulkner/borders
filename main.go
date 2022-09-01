@@ -8,6 +8,7 @@ import (
 
 	"github.com/kpfaulkner/borders/border"
 	"github.com/kpfaulkner/borders/converters"
+	"github.com/kpfaulkner/borders/image"
 )
 
 func main() {
@@ -24,7 +25,21 @@ func main() {
 	//img, err := border.LoadImage("tiny.png")
 	//img, err := border.LoadImage("big-test-image.png")
 	//img, err := border.LoadImage("testimages/sidespike.png", true)
-	img, err := border.LoadImage("florida-big.png", true)
+	img, err := border.LoadImage("florida-big.png", false)
+
+	img2, err := image.Erode(img, 1)
+	if err != nil {
+		panic("BOOM on erode")
+	}
+
+	img3, err := image.Dilate(img2, 1)
+	if err != nil {
+		panic("BOOM on dilate")
+	}
+
+	//img3 := img2
+
+	border.SaveImage("test.png", img3)
 
 	PrintMemUsage("image loaded")
 	if err != nil {
