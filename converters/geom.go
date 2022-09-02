@@ -7,6 +7,7 @@ import (
 
 	"github.com/kpfaulkner/borders/border"
 	"github.com/peterstace/simplefeatures/geom"
+	"github.com/peterstace/simplefeatures/geos"
 )
 
 const (
@@ -26,12 +27,9 @@ func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, s
 }
 
 // ConvertContourToPolygon converts the contours (set of x/y coords) to geometries commonly used in the GIS space
-func ConvertContourToPolygon(c *border.Contour, filterOutConflictingBoundaries bool, simplify bool, pointConverters ...PointConverter) (*geom.MultiPolygon, error) {
-
-	//ls := []geom.LineString{}
+func ConvertContourToPolygon(c *border.Contour, filterOutConflictingBoundaries bool, simplify bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
 	polygons := []geom.Polygon{}
 
-	// err := convertContourToLineStrings(c, pointConverters, &ls, filterOutConflictingBoundaries)
 	err := convertContourToPolygons(c, pointConverters, &polygons, filterOutConflictingBoundaries)
 	if err != nil {
 		return nil, err
@@ -43,20 +41,25 @@ func ConvertContourToPolygon(c *border.Contour, filterOutConflictingBoundaries b
 		return nil, err
 	}
 
+	gg, err := geos.MakeValid(mp.AsGeometry())
+	if err != nil {
+		return nil, err
+	}
+
 	if simplify {
 
-		// should calculate tolerance but seems way off. Keeping to 0.00015 for tests so far.
 		//tolerance := generateSimplifyTolerance(22)
-		tolerance := 0.00015
+		tolerance := 0.0002
+
 		// will calculate the threshold later. For now, 0.0002 is a reasonable value
-		p2, err := mp.Simplify(tolerance, geom.DisableAllValidations)
+		simplifiedGeom, err := gg.Simplify(tolerance)
 		if err != nil {
-			fmt.Printf("Cannot simplify polygon: %s\n", err.Error())
 			return nil, err
 		}
-		return &p2, nil
+
+		return &simplifiedGeom, nil
 	}
-	return &mp, nil
+	return &gg, nil
 }
 
 func generateLineString(points []image.Point, pointConverters []PointConverter) (*geom.LineString, error) {
@@ -257,6 +260,7 @@ func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile f
 
 func generateSimplifyTolerance(scale int) float64 {
 	metresPerTile := tileSizeInMetres(scale)
+	fmt.Printf("metres per tile %f\n", metresPerTile)
 	tolerance := simplifyToleranceInMetres / metresPerTile
 	return tolerance
 }

@@ -26,6 +26,7 @@ func main() {
 	//img, err := border.LoadImage("big-test-image.png")
 	//img, err := border.LoadImage("testimages/sidespike.png", true)
 	img, err := border.LoadImage("florida-big.png", false)
+	//img, err := border.LoadImage("test-full.png", false)
 
 	img2, err := image.Erode(img, 1)
 	if err != nil {
@@ -47,14 +48,14 @@ func main() {
 	}
 
 	start := time.Now()
-	cont := border.FindContours(img)
+	cont := border.FindContours(img3)
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
 	PrintMemUsage("found contours")
 	//saveContourSliceImage("contour.png", cont, img.Width,
 	//img.Height, false, 0, false)
-	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
+	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, true, 1000)
 	//border.SaveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0)
 
 	slippyConverter := converters.NewSlippyToLatLongConverter(1139408, 1772861, 22)
