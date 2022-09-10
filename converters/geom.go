@@ -1,6 +1,7 @@
 package converters
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"math"
@@ -27,10 +28,16 @@ func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, s
 }
 
 // ConvertContourToPolygon converts the contours (set of x/y coords) to geometries commonly used in the GIS space
-func ConvertContourToPolygon(c *border.Contour, filterOutConflictingBoundaries bool, simplify bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
+// Will most likely (after simplification) generate a GeometryCollection. Will need to strip out multipolygons from that.
+// params:
+//
+//	simplify. Simplify the resulting polygons
+//	multiPolygonOnly. If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
+//	pointConverters. Used to convert point co-ord systems. eg. slippy to lat/long.
+func ConvertContourToPolygon(c *border.Contour, simplify bool, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
 	polygons := []geom.Polygon{}
 
-	err := convertContourToPolygons(c, pointConverters, &polygons, filterOutConflictingBoundaries)
+	err := convertContourToPolygons(c, pointConverters, &polygons)
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +64,17 @@ func ConvertContourToPolygon(c *border.Contour, filterOutConflictingBoundaries b
 			return nil, err
 		}
 
+		if multiPolygonOnly {
+			gc, ok := simplifiedGeom.AsGeometryCollection()
+			if ok {
+				mp, err := filterMultiPolygonFromGeometryCollection(&gc)
+				if err == nil {
+					g2 := mp.AsGeometry()
+					return &g2, nil
+				}
+			}
+			return nil, errors.New("unable to filter multipolygon from geometry collection")
+		}
 		return &simplifiedGeom, nil
 	}
 	return &gg, nil
@@ -81,14 +99,7 @@ func generateLineString(points []image.Point, pointConverters []PointConverter) 
 	return &geom.LineString{}, nil
 }
 
-func convertContourToPolygons(c *border.Contour, pointConverters []PointConverter, polygons *[]geom.Polygon, filterConflicts bool) error {
-
-	// artificial bailout.
-
-	// mark children with conflicts as unusable
-	// any siblings that we conflict with, mark as unusable. This means that when multiple siblings (that conflict)
-	// the first one will be used but others will not. Not ideal, but is a starting place. TODO(kpfaulkner) FIX THIS!
-	//markConflictedSiblingsAsUnusable(c)
+func convertContourToPolygons(c *border.Contour, pointConverters []PointConverter, polygons *[]geom.Polygon) error {
 
 	// outer... so make a poly
 	// will also cover hole if there.
@@ -130,60 +141,8 @@ func convertContourToPolygons(c *border.Contour, pointConverters []PointConverte
 	for _, child := range c.Children {
 		// only process child if no conflict with parent.
 		if !child.ParentCollision && child.Usable {
-			err := convertContourToPolygons(child, pointConverters, polygons, filterConflicts)
+			err := convertContourToPolygons(child, pointConverters, polygons)
 			if err != nil {
-				fmt.Printf("XXX err2 %s\n", err.Error())
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// convertContourToLineStrings generate linestrings (later used to create polygons).
-// filterConflicts is used to filter out boundaries that conflict with parent or siblings.
-// Have NOT determined a good way to determine which sibling should be removed. TODO(kpfaulkner)
-func convertContourToLineStrings(c *border.Contour, pointConverters []PointConverter, lineStrings *[]geom.LineString, filterConflicts bool) error {
-
-	seq := pointsToSequence(c.Points, pointConverters)
-
-	if c.BorderType == border.Hole {
-		seq = seq.Reverse()
-	}
-
-	if seq.Length() > 2 {
-		ls, err := geom.NewLineString(seq)
-		if err != nil {
-			fmt.Printf("seq len %d\n", seq.Length())
-			return err
-		}
-
-		// if linestring only has 1 value, then ditch.
-		if seq.Length() >= 1 {
-			//fmt.Printf("LS is %s\n", ls.AsText())
-
-			if c.BorderType == border.Hole {
-				ls = ls.Reverse()
-			}
-			fmt.Printf("LS is %s\n", ls.AsText())
-
-			*lineStrings = append(*lineStrings, ls)
-		}
-	}
-
-	// mark children with conflicts as unusable
-	// any siblings that we conflict with, mark as unusable. This means that when multiple siblings (that conflict)
-	// the first one will be used but others will not. Not ideal, but is a starting place. TODO(kpfaulkner) FIX THIS!
-	markConflictedSiblingsAsUnusable(c)
-
-	for _, child := range c.Children {
-
-		// only process child if no conflict with parent.
-		if !child.ParentCollision && child.Usable {
-			err := convertContourToLineStrings(child, pointConverters, lineStrings, filterConflicts)
-			if err != nil {
-				fmt.Printf("XXX err2 %s\n", err.Error())
 				return err
 			}
 		}
@@ -268,4 +227,18 @@ func generateSimplifyTolerance(scale int) float64 {
 // tileSizeInMetres
 func tileSizeInMetres(scale int) float64 {
 	return 2 * math.Pi * EarthRadius / float64(uint64(1)<<uint64(scale))
+}
+
+func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*geom.MultiPolygon, error) {
+	var mp geom.MultiPolygon
+	var ok bool
+	for i := 0; i < col.NumGeometries(); i++ {
+		g := col.GeometryN(i)
+		mp, ok = g.AsMultiPolygon()
+		if ok {
+			return &mp, nil
+		}
+	}
+
+	return nil, errors.New("no multipolygon found in geometry collection")
 }

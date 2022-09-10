@@ -55,12 +55,12 @@ func main() {
 	PrintMemUsage("found contours")
 	//saveContourSliceImage("contour.png", cont, img.Width,
 	//img.Height, false, 0, false)
-	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, true, 1000)
+	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, false, 0)
 	//border.SaveContourSliceImage("c:/temp/contour/contour", cont, img.Width, img.Height, true, 0)
 
 	slippyConverter := converters.NewSlippyToLatLongConverter(1139408, 1772861, 22)
 
-	poly, err := converters.ConvertContourToPolygon(cont, false, true, slippyConverter)
+	poly, err := converters.ConvertContourToPolygon(cont, true, true, slippyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}

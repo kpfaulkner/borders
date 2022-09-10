@@ -59,24 +59,20 @@ func Dilate(img *border.SuzukiImage, radius int) (*border.SuzukiImage, error) {
 			// for each pixel, check if any pixels within radius are 1
 			// if not, set to 0
 			if img.GetXY(x, y) == 1 {
-				dilateRadiusAroundPoint(img, img2, x, y, img.Width, img.Height, radius)
+				dilateRadiusAroundPoint(img2, x, y, img.Width, img.Height, radius)
 			}
 		}
 	}
 	return img2, nil
 }
 
-func dilateRadiusAroundPoint(img *border.SuzukiImage, img2 *border.SuzukiImage, x int, y int, width int, height int, radius int) {
+func dilateRadiusAroundPoint(img2 *border.SuzukiImage, x int, y int, width int, height int, radius int) {
 	for i := -radius; i <= radius; i++ {
 		for j := -radius; j <= radius; j++ {
 			if x+i < 0 || y+j < 0 || x+i >= width || y+j >= height {
 				continue // out of bounds.
 			}
 			img2.SetXY(x+i, y+j, 1)
-			/*
-				if img.GetXY(x+i, y+j) == 1 {
-					return true
-				} */
 		}
 	}
 }
