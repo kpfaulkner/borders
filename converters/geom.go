@@ -48,16 +48,13 @@ func ConvertContourToPolygon(c *border.Contour, simplify bool, multiPolygonOnly 
 		return nil, err
 	}
 
-	var gg geom.Geometry
-	if !mp.IsSimple() {
-		gg, err = geos.MakeValid(mp.AsGeometry())
-		if err != nil {
-			return nil, err
-		}
+	// need to find condition where MakeValid is actually required. Not optimal to do it all the time.
+	gg, err := geos.MakeValid(mp.AsGeometry())
+	if err != nil {
+		return nil, err
 	}
 
 	if simplify {
-
 		//tolerance := generateSimplifyTolerance(22)
 		tolerance := 0.0002
 
