@@ -61,7 +61,7 @@ func main() {
 
 	slippyConverter := converters.NewSlippyToLatLongConverter(1139408, 1772861, 22)
 
-	poly, err := converters.ConvertContourToPolygon(cont, true, true, slippyConverter)
+	poly, err := converters.ConvertContourToPolygon(cont, 22, true, true, slippyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}
