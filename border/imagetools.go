@@ -129,9 +129,6 @@ func drawContour(img *image.RGBA, c *Contour, flipBook bool, minContourSize int,
 	}
 
 	max := len(colours)
-
-	fmt.Printf("point count %d\n", len(c.Points))
-
 	if c.BorderType == Outer {
 		colour = 0
 	}

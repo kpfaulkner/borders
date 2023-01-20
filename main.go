@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"time"
 
@@ -64,6 +65,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}
+
+	j, _ := poly.MarshalJSON()
+	os.WriteFile("final.geojson", j, 0644)
 
 	fmt.Printf("convert to polygon took %d ms\n", time.Now().Sub(start).Milliseconds())
 	PrintMemUsage("convert to poly")

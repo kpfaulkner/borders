@@ -2,13 +2,14 @@ package converters
 
 import (
 	"errors"
-	"fmt"
 	"image"
+
+	log "github.com/sirupsen/logrus"
+
 	"math"
 
 	"github.com/kpfaulkner/borders/border"
 	"github.com/peterstace/simplefeatures/geom"
-	"github.com/peterstace/simplefeatures/geos"
 )
 
 const (
@@ -34,7 +35,7 @@ func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, s
 //	simplify. Simplify the resulting polygons
 //	multiPolygonOnly. If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
 //	pointConverters. Used to convert point co-ord systems. eg. slippy to lat/long.
-func ConvertContourToPolygon(c *border.Contour, simplify bool, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
+func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
 	polygons := []geom.Polygon{}
 
 	err := convertContourToPolygons(c, pointConverters, &polygons)
@@ -44,33 +45,34 @@ func ConvertContourToPolygon(c *border.Contour, simplify bool, multiPolygonOnly 
 
 	mp, err := geom.NewMultiPolygon(polygons)
 	if err != nil {
-		fmt.Printf("Cannot make multipolygon: %s\n", err.Error())
+		log.Errorf("Cannot make multipolygon: %s", err.Error())
 		return nil, err
 	}
 
-	// need to find condition where MakeValid is actually required. Not optimal to do it all the time.
-	gg, err := geos.MakeValid(mp.AsGeometry())
-	if err != nil {
-		return nil, err
-	}
-
+	gg := mp.AsGeometry()
 	if simplify {
-		//tolerance := generateSimplifyTolerance(22)
-		tolerance := 0.0002
+		tolerance := generateSimplifyTolerance(scale)
 
 		// will calculate the threshold later. For now, 0.0002 is a reasonable value
-		simplifiedGeom, err := gg.Simplify(tolerance)
+		simplifiedGeom, err := gg.Simplify(tolerance, geom.ConstructorOption(geom.DisableAllValidations))
 		if err != nil {
 			return nil, err
 		}
 
 		if multiPolygonOnly {
-			gc, ok := simplifiedGeom.AsGeometryCollection()
-			if ok {
-				mp, err := filterMultiPolygonFromGeometryCollection(&gc)
-				if err == nil {
-					g2 := mp.AsGeometry()
-					return &g2, nil
+			if simplifiedGeom.Type() == geom.TypeMultiPolygon {
+				return &simplifiedGeom, nil
+			}
+
+			// need to check when we get geometrycollection vs multipolygon
+			if simplifiedGeom.Type() == geom.TypeGeometryCollection {
+				gc, ok := simplifiedGeom.AsGeometryCollection()
+				if ok {
+					mp, err := filterMultiPolygonFromGeometryCollection(&gc)
+					if err == nil {
+						g2 := mp.AsGeometry()
+						return &g2, nil
+					}
 				}
 			}
 			return nil, errors.New("unable to filter multipolygon from geometry collection")
@@ -86,7 +88,6 @@ func generateLineString(points []image.Point, pointConverters []PointConverter) 
 	if seq.Length() > 2 {
 		ls, err := geom.NewLineString(seq)
 		if err != nil {
-			fmt.Printf("seq len %d\n", seq.Length())
 			return nil, err
 		}
 
@@ -128,10 +129,10 @@ func convertContourToPolygons(c *border.Contour, pointConverters []PointConverte
 		var poly geom.Polygon
 		poly, err = geom.NewPolygon(lineStrings, geom.DisableAllValidations)
 		if err != nil {
-			fmt.Printf("unable to make polygon, len %d : %s\n", len(lineStrings), err.Error())
+			log.Debugf("unable to make polygon, len %d : %s", len(lineStrings), err.Error())
 			poly, err = geom.NewPolygon(lineStrings)
 			if err != nil {
-				fmt.Printf("unable to make polygon second time : %s\n", err.Error())
+				log.Errorf("unable to make polygon second time : %s\n", err.Error())
 				return err
 			}
 		}
@@ -149,36 +150,6 @@ func convertContourToPolygons(c *border.Contour, pointConverters []PointConverte
 	}
 
 	return nil
-}
-
-func markConflictedSiblingsAsUnusable(node *border.Contour) {
-
-	conflictedIds := make(map[int]bool)
-	for _, c := range node.Children {
-
-		// if already marked as unusable, then skip
-		if !c.Usable {
-			continue
-		}
-
-		// collision with parent... skip
-		if c.ParentCollision {
-			//fmt.Printf("1 marking %d as unusable\n", c.Id)
-			//c.Usable = false
-			continue
-		}
-
-		// already marked in conflictedIds... skip
-		if _, has := conflictedIds[c.Id]; has {
-			//fmt.Printf("2 marking %d as unusable\n", c.Id)
-			//c.Usable = false
-		}
-
-		// take all the ones that this child is conflicting with, and mark those to skip.
-		for conflictId, _ := range c.ConflictingContours {
-			conflictedIds[conflictId] = true
-		}
-	}
 }
 
 func pointsToSequence(points []image.Point, converters []PointConverter) geom.Sequence {
@@ -218,9 +189,16 @@ func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile f
 }
 
 func generateSimplifyTolerance(scale int) float64 {
-	metresPerTile := tileSizeInMetres(scale)
-	fmt.Printf("metres per tile %f\n", metresPerTile)
-	tolerance := simplifyToleranceInMetres / metresPerTile
+
+	// need to figure this out! TODO(kpfaulkner)
+	/*
+		metresPerTile := tileSizeInMetres(scale)
+		tolerance := simplifyToleranceInMetres / metresPerTile
+	*/
+
+	// hardcode 0.0002 for now... working well for all test cases
+	tolerance := 0.0002
+
 	return tolerance
 }
 

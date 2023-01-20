@@ -15,3 +15,6 @@
 # vendor/
 
 .idea/*
+
+# never check in work related notes...
+work-notes.txt
