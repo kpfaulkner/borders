@@ -12,13 +12,6 @@ import (
 	"github.com/anthonynsimon/bild/imgio"
 )
 
-const (
-
-	// padding for image we load. Since we need the outer pixels to be 0
-	padding     = 2
-	halfPadding = padding / 2
-)
-
 // LoadImage loads a PNG and returns a SuzukiImage.
 // This may change since SuzukiImage may not really be required.
 // erode flag forces the eroding of the image before converting to a SuzukiImage.
@@ -47,7 +40,7 @@ func LoadImage(filename string, erode bool) (*SuzukiImage, error) {
 	}
 
 	// need border to be black. Pad edges with 1 black pixel
-	si := NewSuzukiImage(img.Bounds().Dx()+padding, img.Bounds().Dy()+padding)
+	si := NewSuzukiImage(img.Bounds().Dx(), img.Bounds().Dy())
 
 	// dumb... but convert to own image format for now.
 	for y := 0; y < img.Bounds().Dy(); y++ {
@@ -59,7 +52,7 @@ func LoadImage(filename string, erode bool) (*SuzukiImage, error) {
 			if !(r == 0 && g == 0 && b == 0) {
 				cc = 1
 			}
-			si.SetXY(x+halfPadding, y+halfPadding, cc)
+			si.SetXY(x, y, cc)
 		}
 
 	}

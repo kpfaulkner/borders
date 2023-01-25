@@ -1,6 +1,7 @@
 package border
 
 import (
+	"fmt"
 	"image"
 	"log"
 )
@@ -210,6 +211,16 @@ func FindContours(img *SuzukiImage) *Contour {
 		for j := 0; j < width; j++ {
 			fji := img.GetXY(j, i)
 			isOuter := fji == 1 && (j == 0 || img.GetXY(j-1, i) == 0)
+
+			if isOuter {
+				fmt.Printf("OUTER : %d %d\n", j, i)
+				fmt.Printf("254, 171 : is %d\n", img.GetXY(254, 171))
+
+				fmt.Printf("other left : %d %d is %d\n", j-1, i, img.GetXY(j-1, i))
+				fmt.Printf("other up : %d %d is %d\n", j, i-1, img.GetXY(j, i-1))
+				fmt.Printf("other right : %d %d is %d\n", j+1, i, img.GetXY(j+1, i))
+				fmt.Printf("other down : %d %d is %d\n", j, i+1, img.GetXY(j, i+1))
+			}
 			isHole := fji >= 1 && (j == width-1 || img.GetXY(j+1, i) == 0)
 			if isOuter || isHole {
 

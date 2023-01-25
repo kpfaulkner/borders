@@ -27,6 +27,7 @@ func main() {
 	//img, err := border.LoadImage("big-test-image.png")
 	//img, err := border.LoadImage("testimages/sidespike.png", true)
 	img, err := border.LoadImage("florida-big.png", false)
+	//img, err := border.LoadImage("test.png", false)
 	//img, err := border.LoadImage("test-full.png", false)
 
 	img2, err := image.Erode(img, 1)
@@ -38,10 +39,7 @@ func main() {
 	if err != nil {
 		panic("BOOM on dilate")
 	}
-
-	//img3 := img2
-
-	border.SaveImage("test.png", img3)
+	border.SaveImage("bordertest.png", img3)
 
 	PrintMemUsage("image loaded")
 	if err != nil {
