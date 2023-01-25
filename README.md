@@ -10,7 +10,6 @@ This implementation is based off the original paper as well as being inspired by
 Borders generates a tree of contours/borders which are generated from a monochrome bitmap. The bitmap needs to be either black/0 for background and white/1 for content to be scanned for borders.
 The result is a tree of borders due to borders can contain inner borders (holes), which can in turn contain other borders etc.
 
-The API is NOT stable yet and is in progress.
 
 ## Usage
 
