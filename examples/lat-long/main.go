@@ -12,15 +12,11 @@ import (
 )
 
 func main() {
-
-	// the florida2 example image has lat/long co-ords of 25.9424/-81.7430
-	// with scale/zoom level 14
 	lng := 150.300446
 	lat := -34.652429
 
 	scale := 18
 	img, err := border.LoadImage("../../testimages/highres-bw.png", false)
-	//img, err := border.LoadImage("../../florida-big.png", false)
 
 	img2, err := image.Erode(img, 1)
 	if err != nil {
@@ -45,7 +41,7 @@ func main() {
 
 	xyConverter := converters.NewPixelXYToLatLongConverter(lat, lng, float64(scale), float64(img3.Width), float64(img3.Height))
 
-	poly, err := converters.ConvertContourToPolygon(cont, scale, true, true, xyConverter)
+	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, true, xyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}

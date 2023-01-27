@@ -15,8 +15,12 @@ import (
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	PrintMemUsage("beginning")
-	img, err := border.LoadImage("testimages/highres-bw.png", false)
+	lng := 150.300446
+	lat := -34.652429
+	scale := 18
+
+	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
+	img, err := border.LoadImage("image based off slippy mask", false)
 
 	img2, err := image.Erode(img, 1)
 	if err != nil {
@@ -41,9 +45,12 @@ func main() {
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
 	PrintMemUsage("found contours")
 	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, false, 0)
-	slippyConverter := converters.NewSlippyToLatLongConverter(1139408, 1772861, 22)
 
-	poly, err := converters.ConvertContourToPolygon(cont, 22, true, true, slippyConverter)
+	// If the input image are base off a slippy mask (ie each pixel represents a tile) then we require a slippy converter.
+	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
+
+	// tolerance of 0 means get ConvertContourToPolygon to calculate it
+	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, true, slippyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}

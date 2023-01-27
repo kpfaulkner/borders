@@ -45,10 +45,11 @@ func LatLongToSlippy(latDegrees float64, longDegrees float64, scale int) (float6
 // Simplifying while in "pixel space" simplifies the simplification tolerance calculation.
 // params:
 //
-//	simplify. Simplify the resulting polygons
-//	multiPolygonOnly. If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
-//	pointConverters. Used to convert point co-ord systems. eg. slippy to lat/long.
-func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
+//	 	simplify. Simplify the resulting polygons
+//		tolerance. Tolerance in pixels when simplifying. If set to 0, then will use defaults.
+//		multiPolygonOnly. If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
+//		pointConverters. Used to convert point co-ord systems. eg. slippy to lat/long.
+func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, tolerance float64, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
 	polygons := []geom.Polygon{}
 
 	err := convertContourToPolygons(c, &polygons)
@@ -63,7 +64,9 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, multiP
 	}
 
 	if simplify {
-		tolerance := generateSimplifyTolerance(scale)
+		if tolerance == 0 {
+			tolerance = generateSimplifyTolerance(scale)
+		}
 		gg := mp.AsGeometry()
 		simplifiedGeom, err := gg.Simplify(tolerance, geom.ConstructorOption(geom.DisableAllValidations))
 		if err != nil {
@@ -226,17 +229,20 @@ func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile f
 	return longDeg, latDeg
 }
 
+// generateSimplifyTolerance will mainly be used when we want to convert to geographical co-ordinates
+// By default we will determine how many metres per pixel (for input scale/zoom) and double it.
 func generateSimplifyTolerance(scale int) float64 {
 	mtrPerPixel := metresPerPixel(scale)
 	tolerance := mtrPerPixel * toleranceInMetres
 	return tolerance
 }
 
-// tileSizeInMetres
+// tileSizeInMetres is the size of a tile in metres.
 func tileSizeInMetres(scale int) float64 {
 	return 2 * math.Pi * EarthRadius / float64(uint64(1)<<uint64(scale))
 }
 
+// metresPerPixel is number of metres for a given input pixel. This is based on the scale/zoom.
 func metresPerPixel(scale int) float64 {
 	return tileSizeInMetres(scale) / 256.0
 }
