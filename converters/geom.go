@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	EarthRadius               = 6378137.0
-	simplifyToleranceInMetres = 50.0
+	EarthRadius       = 6378137.0
+	toleranceInMetres = 2
 )
 
 type PointConverter func(x float64, y float64) (float64, float64)
@@ -28,8 +28,21 @@ func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, s
 	return f
 }
 
+func LatLongToSlippy(latDegrees float64, longDegrees float64, scale int) (float64, float64) {
+	n := math.Exp2(float64(scale))
+	x := int(math.Floor((longDegrees + 180.0) / 360.0 * n))
+	if float64(x) >= n {
+		x = int(n - 1)
+	}
+	y := int(math.Floor((1.0 - math.Log(math.Tan(latDegrees*math.Pi/180.0)+1.0/math.Cos(latDegrees*math.Pi/180.0))/math.Pi) / 2.0 * n))
+	return float64(x), float64(y)
+
+}
+
 // ConvertContourToPolygon converts the contours (set of x/y coords) to geometries commonly used in the GIS space
-// Will most likely (after simplification) generate a GeometryCollection. Will need to strip out multipolygons from that.
+// Convert to polygons, then simplify (if required) while still in "pixel space"
+// Only then apply conversions which may be to lat/long (or any other conversions).
+// Simplifying while in "pixel space" simplifies the simplification tolerance calculation.
 // params:
 //
 //	simplify. Simplify the resulting polygons
@@ -38,7 +51,7 @@ func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, s
 func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
 	polygons := []geom.Polygon{}
 
-	err := convertContourToPolygons(c, pointConverters, &polygons)
+	err := convertContourToPolygons(c, &polygons)
 	if err != nil {
 		return nil, err
 	}
@@ -49,11 +62,9 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, multiP
 		return nil, err
 	}
 
-	gg := mp.AsGeometry()
 	if simplify {
 		tolerance := generateSimplifyTolerance(scale)
-
-		// will calculate the threshold later. For now, 0.0002 is a reasonable value
+		gg := mp.AsGeometry()
 		simplifiedGeom, err := gg.Simplify(tolerance, geom.ConstructorOption(geom.DisableAllValidations))
 		if err != nil {
 			return nil, err
@@ -61,7 +72,8 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, multiP
 
 		if multiPolygonOnly {
 			if simplifiedGeom.Type() == geom.TypeMultiPolygon {
-				return &simplifiedGeom, nil
+				mp, _ = simplifiedGeom.AsMultiPolygon()
+				return returnConvertedGeometry(&mp, pointConverters...)
 			}
 
 			// need to check when we get geometrycollection vs multipolygon
@@ -70,20 +82,54 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, multiP
 				if ok {
 					mp, err := filterMultiPolygonFromGeometryCollection(&gc)
 					if err == nil {
-						g2 := mp.AsGeometry()
-						return &g2, nil
+						return returnConvertedGeometry(mp, pointConverters...)
 					}
 				}
 			}
 			return nil, errors.New("unable to filter multipolygon from geometry collection")
 		}
-		return &simplifiedGeom, nil
+		mp, ok := simplifiedGeom.AsMultiPolygon()
+		if ok {
+			return returnConvertedGeometry(&mp, pointConverters...)
+		} else {
+			return nil, errors.New("unable to convert simplified geom to multipolygon")
+		}
 	}
-	return &gg, nil
+	return returnConvertedGeometry(&mp, pointConverters...)
 }
 
-func generateLineString(points []image.Point, pointConverters []PointConverter) (*geom.LineString, error) {
-	seq := pointsToSequence(points, pointConverters)
+func returnConvertedGeometry(mp *geom.MultiPolygon, pointConverters ...PointConverter) (*geom.Geometry, error) {
+	finalMultiPoly, err := convertCoords(mp, pointConverters...)
+	if err != nil {
+		return nil, err
+	}
+	g := finalMultiPoly.AsGeometry()
+	return &g, nil
+}
+
+func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) (*geom.MultiPolygon, error) {
+
+	mp2, err := mp.TransformXY(func(xy geom.XY) geom.XY {
+		x := xy.X
+		y := xy.Y
+		// run through converters.
+		for _, converter := range converters {
+			newX, newY := converter(x, y)
+			x = newX
+			y = newY
+		}
+		return geom.XY{X: x, Y: y}
+	}, geom.DisableAllValidations)
+
+	if err != nil {
+		log.Errorf("convertCoords err %s", err.Error())
+	}
+	return &mp2, err
+
+}
+
+func generateLineString(points []image.Point) (*geom.LineString, error) {
+	seq := pointsToSequence(points)
 
 	if seq.Length() > 2 {
 		ls, err := geom.NewLineString(seq)
@@ -100,25 +146,24 @@ func generateLineString(points []image.Point, pointConverters []PointConverter) 
 	return &geom.LineString{}, nil
 }
 
-func convertContourToPolygons(c *border.Contour, pointConverters []PointConverter, polygons *[]geom.Polygon) error {
+// convertContourToPolygons converts the contour to a set of polygons but does NOT convert to different co-ord systems.
+func convertContourToPolygons(c *border.Contour, polygons *[]geom.Polygon) error {
 
 	// outer... so make a poly
 	// will also cover hole if there.
 	if c.BorderType == border.Outer {
 
 		lineStrings := []geom.LineString{}
-		outerLS, err := generateLineString(c.Points, pointConverters)
+		outerLS, err := generateLineString(c.Points)
 		if err != nil {
 			return err
 		}
-
-		//*outerLS = outerLS.Simplify(0.0002)
 		lineStrings = append(lineStrings, *outerLS)
 
 		// now get children... (holes).
 		for _, child := range c.Children {
 			if !child.ParentCollision && child.Usable {
-				ls, err := generateLineString(child.Points, pointConverters)
+				ls, err := generateLineString(child.Points)
 				if err != nil {
 					return err
 				}
@@ -142,7 +187,7 @@ func convertContourToPolygons(c *border.Contour, pointConverters []PointConverte
 	for _, child := range c.Children {
 		// only process child if no conflict with parent.
 		if !child.ParentCollision && child.Usable {
-			err := convertContourToPolygons(child, pointConverters, polygons)
+			err := convertContourToPolygons(child, polygons)
 			if err != nil {
 				return err
 			}
@@ -152,19 +197,12 @@ func convertContourToPolygons(c *border.Contour, pointConverters []PointConverte
 	return nil
 }
 
-func pointsToSequence(points []image.Point, converters []PointConverter) geom.Sequence {
+func pointsToSequence(points []image.Point) geom.Sequence {
 	s := len(points)*2 + 2
 	seq := make([]float64, s, s)
 	index := 0
 	for _, origP := range points {
-		x, y := float64(origP.X)-0.5, float64(origP.Y)-0.5 // based off testing. Need to check WHY!??!
-
-		// run through converters.
-		for _, converter := range converters {
-			newX, newY := converter(x, y)
-			x, y = newX, newY
-		}
-
+		x, y := float64(origP.X), float64(origP.Y)
 		seq[index] = x
 		seq[index+1] = y
 		index += 2
@@ -189,22 +227,18 @@ func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile f
 }
 
 func generateSimplifyTolerance(scale int) float64 {
-
-	// need to figure this out! TODO(kpfaulkner)
-	/*
-		metresPerTile := tileSizeInMetres(scale)
-		tolerance := simplifyToleranceInMetres / metresPerTile
-	*/
-
-	// hardcode 0.0002 for now... working well for all test cases
-	tolerance := 0.0002
-
+	mtrPerPixel := metresPerPixel(scale)
+	tolerance := mtrPerPixel * toleranceInMetres
 	return tolerance
 }
 
 // tileSizeInMetres
 func tileSizeInMetres(scale int) float64 {
 	return 2 * math.Pi * EarthRadius / float64(uint64(1)<<uint64(scale))
+}
+
+func metresPerPixel(scale int) float64 {
+	return tileSizeInMetres(scale) / 256.0
 }
 
 func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*geom.MultiPolygon, error) {
@@ -219,4 +253,22 @@ func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*ge
 	}
 
 	return nil, errors.New("no multipolygon found in geometry collection")
+}
+
+func NewPixelXYToLatLongConverter(latCentre float64, lonCentre float64, scale float64, imageWidth float64, imageHeight float64) func(X float64, Y float64) (float64, float64) {
+	f := func(x float64, y float64) (float64, float64) {
+		lat, lon := XYToLatLong(latCentre, lonCentre, int(scale), imageWidth, imageHeight, x, y)
+		return lat, lon
+	}
+	return f
+}
+
+func XYToLatLong(latCentre float64, lonCentre float64, scale int, imageWidth float64, imageHeight float64, x float64, y float64) (float64, float64) {
+	parallelMultiplier := math.Cos(latCentre * math.Pi / 180)
+	degreesPerPixelX := 360 / math.Pow(2, float64(scale+8))
+	degreesPerPixelY := 360 / math.Pow(2, float64(scale+8)) * parallelMultiplier
+	pointLat := latCentre - degreesPerPixelY*(y-imageHeight/2)
+	pointLng := lonCentre + degreesPerPixelX*(x-imageWidth/2)
+
+	return pointLng, pointLat
 }

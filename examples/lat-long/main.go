@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/kpfaulkner/borders/border"
@@ -13,10 +12,15 @@ import (
 )
 
 func main() {
-	fmt.Printf("So it begins...\n")
 
-	PrintMemUsage("beginning")
-	img, err := border.LoadImage("testimages/highres-bw.png", false)
+	// the florida2 example image has lat/long co-ords of 25.9424/-81.7430
+	// with scale/zoom level 14
+	lng := 150.300446
+	lat := -34.652429
+
+	scale := 18
+	img, err := border.LoadImage("../../testimages/highres-bw.png", false)
+	//img, err := border.LoadImage("../../florida-big.png", false)
 
 	img2, err := image.Erode(img, 1)
 	if err != nil {
@@ -27,9 +31,7 @@ func main() {
 	if err != nil {
 		panic("BOOM on dilate")
 	}
-	border.SaveImage("bordertest.png", img3)
 
-	PrintMemUsage("image loaded")
 	if err != nil {
 		panic("BOOM " + err.Error())
 	}
@@ -39,11 +41,11 @@ func main() {
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
-	PrintMemUsage("found contours")
 	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, false, 0)
-	slippyConverter := converters.NewSlippyToLatLongConverter(1139408, 1772861, 22)
 
-	poly, err := converters.ConvertContourToPolygon(cont, 22, true, true, slippyConverter)
+	xyConverter := converters.NewPixelXYToLatLongConverter(lat, lng, float64(scale), float64(img3.Width), float64(img3.Height))
+
+	poly, err := converters.ConvertContourToPolygon(cont, scale, true, true, xyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}
@@ -52,25 +54,7 @@ func main() {
 	os.WriteFile("final.geojson", j, 0644)
 
 	fmt.Printf("convert to polygon took %d ms\n", time.Now().Sub(start).Milliseconds())
-	PrintMemUsage("convert to poly")
-
 	b, _ := poly.MarshalJSON()
 	fmt.Printf("%s\n", string(b))
 
-	PrintMemUsage("end")
-}
-
-func PrintMemUsage(header string) {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
-	fmt.Printf("=====  %s  =====\n", header)
-	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
-	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
-	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
-	fmt.Printf("\tNumGC = %v\n", m.NumGC)
-}
-
-func bToMb(b uint64) uint64 {
-	return b / 1024 / 1024
 }
