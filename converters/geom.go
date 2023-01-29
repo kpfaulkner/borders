@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	EarthRadius       = 6378137.0
-	toleranceInMetres = 2
+	EarthRadius            = 6378137.0
+	pixelsPerTile          = 256
+	metresToleranceForTile = 13 // suitable for own purpose, but clients may want to have their own.
+	pixelTolerance         = 2
 )
 
 type PointConverter func(x float64, y float64) (float64, float64)
@@ -22,7 +24,7 @@ type PointConverter func(x float64, y float64) (float64, float64)
 func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, scale int) func(X float64, Y float64) (float64, float64) {
 	latLongN := math.Pow(2, float64(scale))
 	f := func(x float64, y float64) (float64, float64) {
-		long, lat := slippyCoordsToLongLat(slippyXOffset, slippyYOffset, x, y, latLongN)
+		long, lat := SlippyCoordsToLongLatWithKnownOffset(slippyXOffset, slippyYOffset, x, y, latLongN)
 		return long, lat
 	}
 	return f
@@ -45,11 +47,10 @@ func LatLongToSlippy(latDegrees float64, longDegrees float64, scale int) (float6
 // Simplifying while in "pixel space" simplifies the simplification tolerance calculation.
 // params:
 //
-//	 	simplify. Simplify the resulting polygons
-//		tolerance. Tolerance in pixels when simplifying. If set to 0, then will use defaults.
-//		multiPolygonOnly. If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
-//		pointConverters. Used to convert point co-ord systems. eg. slippy to lat/long.
-func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, tolerance float64, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
+//	simplifyTolerance. Tolerance when simplifying the geometry. 0 means no simplification
+//	multiPolygonOnly. If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
+//	pointConverters. Used to convert point co-ord systems. eg. slippy to lat/long.
+func ConvertContourToPolygon(c *border.Contour, simplifyTolerance float64, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
 	polygons := []geom.Polygon{}
 
 	err := convertContourToPolygons(c, &polygons)
@@ -63,12 +64,9 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, tolera
 		return nil, err
 	}
 
-	if simplify {
-		if tolerance == 0 {
-			tolerance = generateSimplifyTolerance(scale)
-		}
+	if simplifyTolerance > 0 {
 		gg := mp.AsGeometry()
-		simplifiedGeom, err := gg.Simplify(tolerance, geom.ConstructorOption(geom.DisableAllValidations))
+		simplifiedGeom, err := gg.Simplify(simplifyTolerance, geom.ConstructorOption(geom.DisableAllValidations))
 		if err != nil {
 			return nil, err
 		}
@@ -216,12 +214,13 @@ func pointsToSequence(points []image.Point) geom.Sequence {
 	return geom.NewSequence(seq, geom.DimXY)
 }
 
-// slippyCoordsToLongLat converts to lat/long... and requires the slippy offset of top left corner of area.
-func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile float64, yTile float64, latLongN float64) (float64, float64) {
-	//n := math.Pow(2, float64(scale))
+// slippyCoordsToLongLatWithKnownOffset converts to lat/long... and requires the slippy offset of top left corner of area.
+func SlippyCoordsToLongLatWithKnownOffset(slippyXOffset float64, slippyYOffset float64, xTile float64, yTile float64, latLongN float64) (float64, float64) {
+	return SlippyCoordsToLongLat(xTile+slippyXOffset, yTile+slippyYOffset, latLongN)
+}
 
-	x := xTile + slippyXOffset
-	y := yTile + slippyYOffset
+// slippyCoordsToLongLat converts to lat/long
+func SlippyCoordsToLongLat(x float64, y float64, latLongN float64) (float64, float64) {
 	longDeg := (x/latLongN)*360.0 - 180.0
 	latRad := math.Atan(math.Sinh(math.Pi - (y/latLongN)*2*math.Pi))
 	latDeg := latRad * (180.0 / math.Pi)
@@ -229,11 +228,20 @@ func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile f
 	return longDeg, latDeg
 }
 
-// generateSimplifyTolerance will mainly be used when we want to convert to geographical co-ordinates
-// By default we will determine how many metres per pixel (for input scale/zoom) and double it.
-func generateSimplifyTolerance(scale int) float64 {
+// GenerateTileBasedSimplifyTolerance will mainly be used when we want to convert to geographical co-ordinates
+// This is purely ONE implementation of how to generate tolerance. The exact calculations can be client specific
+func GenerateTileBasedSimplifyTolerance(scale int) float64 {
 	mtrPerPixel := metresPerPixel(scale)
-	tolerance := mtrPerPixel * toleranceInMetres
+	tolerance := metresToleranceForTile / (mtrPerPixel * pixelsPerTile)
+	return tolerance
+}
+
+// GeneratePixelBasedSimplifyTolerance will mainly be used when we want to convert an image and we know the scale
+// (zoom level) of the Spherical Mercator projection coordinate system
+// By default we will determine how many metres per pixel (for input scale/zoom) and double it.
+func GeneratePixelBasedSimplifyTolerance(scale int) float64 {
+	mtrPerPixel := metresPerPixel(scale)
+	tolerance := mtrPerPixel * pixelTolerance
 	return tolerance
 }
 

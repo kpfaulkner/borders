@@ -12,9 +12,10 @@ import (
 )
 
 func main() {
+
+	// we know centre of highrest-bw.png and scale/zoom it was taken at.
 	lng := 150.300446
 	lat := -34.652429
-
 	scale := 18
 	img, err := border.LoadImage("../../testimages/highres-bw.png", false)
 
@@ -36,12 +37,10 @@ func main() {
 	cont := border.FindContours(img3)
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
-	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
 	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, false, 0)
-
 	xyConverter := converters.NewPixelXYToLatLongConverter(lat, lng, float64(scale), float64(img3.Width), float64(img3.Height))
-
-	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, true, xyConverter)
+	tolerance := converters.GeneratePixelBasedSimplifyTolerance(scale)
+	poly, err := converters.ConvertContourToPolygon(cont, tolerance, true, xyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}

@@ -15,12 +15,12 @@ import (
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	lng := 150.300446
-	lat := -34.652429
-	scale := 18
+	lng := 26.799788
+	lat := -82.203827
+	scale := 22
 
-	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
-	img, err := border.LoadImage("image based off slippy mask", false)
+	slippyX, slippyY := converters.LatLongToSlippy(lng, lat, scale)
+	img, err := border.LoadImage("florida-big.png", false)
 
 	img2, err := image.Erode(img, 1)
 	if err != nil {
@@ -49,8 +49,13 @@ func main() {
 	// If the input image are base off a slippy mask (ie each pixel represents a tile) then we require a slippy converter.
 	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
 
-	// tolerance of 0 means get ConvertContourToPolygon to calculate it
-	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, true, slippyConverter)
+	// generate tolerance outside of ConvertContourToPolygon.
+	// Need to calculate the tolerance based on is the image based on pixels, metres, tiles etc etc
+	// Only the caller will know which.
+	tolerance := converters.GenerateTileBasedSimplifyTolerance(scale)
+
+	// tolerance must be > 0 for simplification to occur (and simplify param to be true)
+	poly, err := converters.ConvertContourToPolygon(cont, tolerance, true, slippyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}
