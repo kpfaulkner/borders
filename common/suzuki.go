@@ -1,4 +1,4 @@
-package border
+package common
 
 import (
 	"fmt"

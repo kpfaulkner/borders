@@ -9,7 +9,6 @@ import (
 
 	"github.com/kpfaulkner/borders/border"
 	"github.com/kpfaulkner/borders/converters"
-	"github.com/kpfaulkner/borders/image"
 )
 
 func main() {
@@ -20,19 +19,8 @@ func main() {
 	scale := 22
 
 	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
-	//img, err := border.LoadImage("florida-big.png", false)
-	//img, err := border.LoadImage("florida-from-masktest.png", false)
-	img, err := border.LoadImage("coverage-bitmap.png", false)
+	img3, err := border.LoadImage("../data/florida-from-masktest.png", 1, 1)
 
-	img2, err := image.Erode(img, 1)
-	if err != nil {
-		panic("BOOM on erode")
-	}
-
-	img3, err := image.Dilate(img2, 1)
-	if err != nil {
-		panic("BOOM on dilate")
-	}
 	border.SaveImage("bordertest.png", img3)
 
 	PrintMemUsage("image loaded")

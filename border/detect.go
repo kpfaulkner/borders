@@ -1,6 +1,7 @@
 package border
 
 import (
+	"github.com/kpfaulkner/borders/common"
 	"image"
 	"log"
 )
@@ -22,7 +23,7 @@ func counterClockwise(dir int) int {
 }
 
 // move moves the current point (pixel) in the direction 'dir'
-func move(pixel image.Point, img *SuzukiImage, dir int) image.Point {
+func move(pixel image.Point, img *common.SuzukiImage, dir int) image.Point {
 	newP := pixel.Add(dirDelta[dir])
 	width := img.Width
 	height := img.Height
@@ -51,7 +52,7 @@ func calcDir(from image.Point, to image.Point) int {
 // createBorder returns the slice of Points making up the border/contour
 // Also returns list of nbd's that are colliding with this. Can use to help create
 // tree with collision info later.
-func createBorder(img *SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) ([]image.Point, map[int]bool) {
+func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) ([]image.Point, map[int]bool) {
 
 	// track which borders have conflicts
 	collisionIndicies := make(map[int]bool)
@@ -190,7 +191,7 @@ func addCollisionFlag(contour *Contour, parentId int, contours map[int]*Contour,
 // FindContours takes a SuzukiImage (basic 2d slice) and determines the Contours that are present.
 // It returns the single parent contour which in turn has all other contours as children or further
 // generations.
-func FindContours(img *SuzukiImage) *Contour {
+func FindContours(img *common.SuzukiImage) *Contour {
 
 	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	nbd := 1

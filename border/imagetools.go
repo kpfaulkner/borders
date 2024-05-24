@@ -2,23 +2,20 @@ package border
 
 import (
 	"fmt"
+	"github.com/kpfaulkner/borders/common"
+	image2 "github.com/kpfaulkner/borders/image"
 	"image"
 	"image/color"
 	"image/png"
 	_ "image/png"
 	"os"
-
-	"github.com/anthonynsimon/bild/effect"
-	"github.com/anthonynsimon/bild/imgio"
 )
 
 // LoadImage loads a PNG and returns a SuzukiImage.
 // This may change since SuzukiImage may not really be required.
 // erode flag forces the eroding of the image before converting to a SuzukiImage.
 // This is to remove any "spikes" that may appear in the generated boundary.
-func LoadImage(filename string, erode bool) (*SuzukiImage, error) {
-
-	erodeFactor := 0.8
+func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, error) {
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -31,16 +28,8 @@ func LoadImage(filename string, erode bool) (*SuzukiImage, error) {
 		return nil, err
 	}
 
-	if erode {
-		erodeFactor = 0.8
-		img = effect.Erode(img, erodeFactor)
-		if err := imgio.Save("eroded.png", img, imgio.PNGEncoder()); err != nil {
-			fmt.Println(err)
-		}
-	}
-
 	// need border to be black. Pad edges with 1 black pixel
-	si := NewSuzukiImage(img.Bounds().Dx(), img.Bounds().Dy())
+	si := common.NewSuzukiImage(img.Bounds().Dx(), img.Bounds().Dy())
 
 	// dumb... but convert to own image format for now.
 	for y := 0; y < img.Bounds().Dy(); y++ {
@@ -57,11 +46,25 @@ func LoadImage(filename string, erode bool) (*SuzukiImage, error) {
 
 	}
 
+	if erode != 0 {
+		si, err = image2.Erode(si, erode)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if dilate != 0 {
+		si, err = image2.Dilate(si, dilate)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return si, nil
 }
 
 // SaveImage saves a SuzukiImage to filename
-func SaveImage(filename string, si *SuzukiImage) error {
+func SaveImage(filename string, si *common.SuzukiImage) error {
 
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{si.Width, si.Height}

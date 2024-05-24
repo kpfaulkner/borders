@@ -1,13 +1,15 @@
 package image
 
-import "github.com/kpfaulkner/borders/border"
+import (
+	"github.com/kpfaulkner/borders/common"
+)
 
 // Erode the suzuki image, based on Morphological Erosion
 // https://en.wikipedia.org/wiki/Erosion_(morphology)
 // THIS IS GOOD... AT LEAST SAME AS BILT
-func Erode(img *border.SuzukiImage, radius int) (*border.SuzukiImage, error) {
+func Erode(img *common.SuzukiImage, radius int) (*common.SuzukiImage, error) {
 
-	img2 := border.NewSuzukiImage(img.Width, img.Height)
+	img2 := common.NewSuzukiImage(img.Width, img.Height)
 	for y := 0; y < img.Height; y++ {
 		for x := 0; x < img.Width; x++ {
 
@@ -33,7 +35,7 @@ func Erode(img *border.SuzukiImage, radius int) (*border.SuzukiImage, error) {
 	return img2, nil
 }
 
-func checkErodeRadius(img *border.SuzukiImage, x int, y int, width int, height int, radius int) bool {
+func checkErodeRadius(img *common.SuzukiImage, x int, y int, width int, height int, radius int) bool {
 	for i := -radius; i <= radius; i++ {
 		for j := -radius; j <= radius; j++ {
 			if x+i < 0 || y+j < 0 || x+i >= width || y+j >= height {
@@ -50,8 +52,8 @@ func checkErodeRadius(img *border.SuzukiImage, x int, y int, width int, height i
 // Dilate the suzuki image, based on Morphological Dilation
 // https://en.wikipedia.org/wiki/Dilation_(morphology)
 // WORKS
-func Dilate(img *border.SuzukiImage, radius int) (*border.SuzukiImage, error) {
-	img2 := border.NewSuzukiImage(img.Width, img.Height)
+func Dilate(img *common.SuzukiImage, radius int) (*common.SuzukiImage, error) {
+	img2 := common.NewSuzukiImage(img.Width, img.Height)
 
 	for y := 0; y < img.Height; y++ {
 		for x := 0; x < img.Width; x++ {
@@ -66,7 +68,7 @@ func Dilate(img *border.SuzukiImage, radius int) (*border.SuzukiImage, error) {
 	return img2, nil
 }
 
-func dilateRadiusAroundPoint(img2 *border.SuzukiImage, x int, y int, width int, height int, radius int) {
+func dilateRadiusAroundPoint(img2 *common.SuzukiImage, x int, y int, width int, height int, radius int) {
 	for i := -radius; i <= radius; i++ {
 		for j := -radius; j <= radius; j++ {
 			if x+i < 0 || y+j < 0 || x+i >= width || y+j >= height {
