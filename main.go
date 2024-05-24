@@ -17,10 +17,12 @@ func main() {
 
 	lng := 150.300446
 	lat := -34.652429
-	scale := 18
+	scale := 22
 
 	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
-	img, err := border.LoadImage("image based off slippy mask", false)
+	//img, err := border.LoadImage("florida-big.png", false)
+	//img, err := border.LoadImage("florida-from-masktest.png", false)
+	img, err := border.LoadImage("coverage-bitmap.png", false)
 
 	img2, err := image.Erode(img, 1)
 	if err != nil {
@@ -46,17 +48,31 @@ func main() {
 	PrintMemUsage("found contours")
 	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, false, 0)
 
+	slippyX = 1160931
+	slippyY = 1772526
+
 	// If the input image are base off a slippy mask (ie each pixel represents a tile) then we require a slippy converter.
 	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
 
 	// tolerance of 0 means get ConvertContourToPolygon to calculate it
 	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, true, slippyConverter)
 	if err != nil {
-		log.Fatalf("Unable to convert to polygon : %s", err.Error())
+		log.Fatalf("Unable to convert to simple polygon : %s", err.Error())
 	}
 
 	j, _ := poly.MarshalJSON()
-	os.WriteFile("final.geojson", j, 0644)
+	os.WriteFile("simple-final.geojson", j, 0644)
+
+	fmt.Printf("convert to simple polygon took %d ms\n", time.Now().Sub(start).Milliseconds())
+
+	// tolerance of 0 means get ConvertContourToPolygon to calculate it
+	fullPoly, err := converters.ConvertContourToPolygon(cont, scale, false, 0, true, slippyConverter)
+	if err != nil {
+		log.Fatalf("Unable to convert to polygon : %s", err.Error())
+	}
+
+	j, _ = fullPoly.MarshalJSON()
+	os.WriteFile("full-final.geojson", j, 0644)
 
 	fmt.Printf("convert to polygon took %d ms\n", time.Now().Sub(start).Milliseconds())
 	PrintMemUsage("convert to poly")
