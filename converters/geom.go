@@ -4,8 +4,6 @@ import (
 	"errors"
 	"image"
 
-	log "github.com/sirupsen/logrus"
-
 	"math"
 
 	"github.com/kpfaulkner/borders/border"
@@ -57,18 +55,14 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, tolera
 		return nil, err
 	}
 
-	mp, err := geom.NewMultiPolygon(polygons)
-	if err != nil {
-		log.Errorf("Cannot make multipolygon: %s", err.Error())
-		return nil, err
-	}
+	mp := geom.NewMultiPolygon(polygons)
 
 	if simplify {
 		if tolerance == 0 {
 			tolerance = generateSimplifyTolerance(scale)
 		}
 		gg := mp.AsGeometry()
-		simplifiedGeom, err := gg.Simplify(tolerance, geom.ConstructorOption(geom.DisableAllValidations))
+		simplifiedGeom, err := gg.Simplify(tolerance, geom.NoValidate{})
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +106,7 @@ func returnConvertedGeometry(mp *geom.MultiPolygon, pointConverters ...PointConv
 
 func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) (*geom.MultiPolygon, error) {
 
-	mp2, err := mp.TransformXY(func(xy geom.XY) geom.XY {
+	mp2 := mp.TransformXY(func(xy geom.XY) geom.XY {
 		x := xy.X
 		y := xy.Y
 		// run through converters.
@@ -122,12 +116,9 @@ func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) (*geom.M
 			y = newY
 		}
 		return geom.XY{X: x, Y: y}
-	}, geom.DisableAllValidations)
+	})
 
-	if err != nil {
-		log.Errorf("convertCoords err %s", err.Error())
-	}
-	return &mp2, err
+	return &mp2, nil
 
 }
 
@@ -135,10 +126,7 @@ func generateLineString(points []image.Point) (*geom.LineString, error) {
 	seq := pointsToSequence(points)
 
 	if seq.Length() > 2 {
-		ls, err := geom.NewLineString(seq)
-		if err != nil {
-			return nil, err
-		}
+		ls := geom.NewLineString(seq)
 
 		// if linestring only has 1 value, then ditch.
 		if seq.Length() >= 1 {
@@ -175,15 +163,7 @@ func convertContourToPolygons(c *border.Contour, polygons *[]geom.Polygon) error
 		}
 
 		var poly geom.Polygon
-		poly, err = geom.NewPolygon(lineStrings, geom.DisableAllValidations)
-		if err != nil {
-			log.Debugf("unable to make polygon, len %d : %s", len(lineStrings), err.Error())
-			poly, err = geom.NewPolygon(lineStrings)
-			if err != nil {
-				log.Errorf("unable to make polygon second time : %s\n", err.Error())
-				return err
-			}
-		}
+		poly = geom.NewPolygon(lineStrings)
 		*polygons = append(*polygons, poly)
 	}
 
