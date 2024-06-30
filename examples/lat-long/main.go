@@ -8,7 +8,6 @@ import (
 
 	"github.com/kpfaulkner/borders/border"
 	"github.com/kpfaulkner/borders/converters"
-	"github.com/kpfaulkner/borders/image"
 )
 
 func main() {
@@ -16,34 +15,22 @@ func main() {
 	lat := -34.652429
 
 	scale := 18
-	img, err := border.LoadImage("../../testimages/highres-bw.png", false)
-
-	img2, err := image.Erode(img, 1)
-	if err != nil {
-		panic("BOOM on erode")
-	}
-
-	img3, err := image.Dilate(img2, 1)
-	if err != nil {
-		panic("BOOM on dilate")
-	}
-
-	if err != nil {
-		panic("BOOM " + err.Error())
-	}
+	img, err := border.LoadImage("../../testimages/highres-bw.png", 1, 1)
 
 	start := time.Now()
-	cont := border.FindContours(img3)
+	cont := border.FindContours(img)
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
-	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, false, 0)
+	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
 
-	xyConverter := converters.NewPixelXYToLatLongConverter(lat, lng, float64(scale), float64(img3.Width), float64(img3.Height))
+	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
+	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
 
-	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, true, xyConverter)
+	// tolerance of 0 means get ConvertContourToPolygon to calculate it
+	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, 0, true, slippyConverter)
 	if err != nil {
-		log.Fatalf("Unable to convert to polygon : %s", err.Error())
+		log.Fatalf("Unable to convert to simple polygon : %s", err.Error())
 	}
 
 	j, _ := poly.MarshalJSON()

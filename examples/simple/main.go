@@ -21,7 +21,7 @@ func displayContour(cont border.Contour) {
 
 func main() {
 	PrintMemUsage("beginning")
-	img, err := border.LoadImage("../../testimages/image3.png", false)
+	img, err := border.LoadImage("../../testimages/image3.png", 1, 1)
 	PrintMemUsage("image loaded")
 	if err != nil {
 		panic("BOOM " + err.Error())

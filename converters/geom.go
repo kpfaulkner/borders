@@ -3,7 +3,6 @@ package converters
 import (
 	"errors"
 	"image"
-
 	"math"
 
 	"github.com/kpfaulkner/borders/border"
@@ -43,14 +42,15 @@ func LatLongToSlippy(latDegrees float64, longDegrees float64, scale int) (float6
 // Simplifying while in "pixel space" simplifies the simplification tolerance calculation.
 // params:
 //
-//	 	simplify. Simplify the resulting polygons
-//		tolerance. Tolerance in pixels when simplifying. If set to 0, then will use defaults.
-//		multiPolygonOnly. If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
-//		pointConverters. Used to convert point co-ord systems. eg. slippy to lat/long.
-func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, tolerance float64, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
+//		simplify: Simplify the resulting polygons
+//	    minPoints: Minimum number of vertices for a polygon to be considered valid. If less than this, then will be discarded. 0 means no minimum
+//		tolerance: Tolerance in pixels when simplifying. If set to 0, then will use defaults.
+//		multiPolygonOnly: If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
+//		pointConverters: Used to convert point co-ord systems. eg. slippy to lat/long.
+func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, minPoints int, tolerance float64, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
 	polygons := []geom.Polygon{}
 
-	err := convertContourToPolygons(c, &polygons)
+	err := convertContourToPolygons(c, minPoints, &polygons)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,8 @@ func generateLineString(points []image.Point) (*geom.LineString, error) {
 }
 
 // convertContourToPolygons converts the contour to a set of polygons but does NOT convert to different co-ord systems.
-func convertContourToPolygons(c *border.Contour, polygons *[]geom.Polygon) error {
+// If a polygon has fewer than minPoints then it will be discarded. 0 means no min points.
+func convertContourToPolygons(c *border.Contour, minPoints int, polygons *[]geom.Polygon) error {
 
 	// outer... so make a poly
 	// will also cover hole if there.
@@ -163,14 +164,16 @@ func convertContourToPolygons(c *border.Contour, polygons *[]geom.Polygon) error
 		}
 
 		var poly geom.Polygon
-		poly = geom.NewPolygon(lineStrings)
-		*polygons = append(*polygons, poly)
+		if minPoints == 0 || len(lineStrings) > minPoints {
+			poly = geom.NewPolygon(lineStrings)
+			*polygons = append(*polygons, poly)
+		}
 	}
 
 	for _, child := range c.Children {
 		// only process child if no conflict with parent.
 		if !child.ParentCollision && child.Usable {
-			err := convertContourToPolygons(child, polygons)
+			err := convertContourToPolygons(child, minPoints, polygons)
 			if err != nil {
 				return err
 			}
@@ -241,6 +244,8 @@ func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*ge
 	return nil, errors.New("no multipolygon found in geometry collection")
 }
 
+// FIXME(kpfaulkner) really cant remember the reason for the logic with this.
+// ///////// potentially delete
 func NewPixelXYToLatLongConverter(latCentre float64, lonCentre float64, scale float64, imageWidth float64, imageHeight float64) func(X float64, Y float64) (float64, float64) {
 	f := func(x float64, y float64) (float64, float64) {
 		lat, lon := XYToLatLong(latCentre, lonCentre, int(scale), imageWidth, imageHeight, x, y)
@@ -258,3 +263,5 @@ func XYToLatLong(latCentre float64, lonCentre float64, scale int, imageWidth flo
 
 	return pointLng, pointLat
 }
+
+/////////////////////////////////

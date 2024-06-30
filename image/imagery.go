@@ -6,7 +6,6 @@ import (
 
 // Erode the suzuki image, based on Morphological Erosion
 // https://en.wikipedia.org/wiki/Erosion_(morphology)
-// THIS IS GOOD... AT LEAST SAME AS BILT
 func Erode(img *common.SuzukiImage, radius int) (*common.SuzukiImage, error) {
 
 	img2 := common.NewSuzukiImage(img.Width, img.Height)
@@ -51,7 +50,6 @@ func checkErodeRadius(img *common.SuzukiImage, x int, y int, width int, height i
 
 // Dilate the suzuki image, based on Morphological Dilation
 // https://en.wikipedia.org/wiki/Dilation_(morphology)
-// WORKS
 func Dilate(img *common.SuzukiImage, radius int) (*common.SuzukiImage, error) {
 	img2 := common.NewSuzukiImage(img.Width, img.Height)
 

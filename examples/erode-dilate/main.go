@@ -6,34 +6,26 @@ import (
 	"time"
 
 	"github.com/kpfaulkner/borders/border"
-	"github.com/kpfaulkner/borders/image"
 )
 
 func main() {
 	PrintMemUsage("beginning")
-	img, err := border.LoadImage("florida-big.png", false)
-
-	// erode + dilate are used to remove noise from the image.
-	img2, err := image.Erode(img, 1)
+	img, err := border.LoadImage("../../testimages/florida.png", 1, 1)
 	if err != nil {
-		panic("BOOM on erode")
+		panic("BOOM " + err.Error())
 	}
 
-	img3, err := image.Dilate(img2, 1)
-	if err != nil {
-		panic("BOOM on dilate")
-	}
-	border.SaveImage("after-erode-dilate.png", img3)
+	border.SaveImage("after-erode-dilate.png", img)
 
 	PrintMemUsage("image loaded")
 
 	start := time.Now()
-	cont := border.FindContours(img3)
+	cont := border.FindContours(img)
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
 	PrintMemUsage("found contours")
-	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, false, 0)
+	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
 	PrintMemUsage("end")
 }
 

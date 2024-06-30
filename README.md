@@ -15,6 +15,7 @@ The result is a tree of borders due to borders can contain inner borders (holes)
 
 Easiest approach is to have a black and white png file and execute:
 
+To generate contours from one file and save to another:
 ```
 img,_ := border.LoadImage("test.png")
 
@@ -23,6 +24,11 @@ contour := border.FindContours(img)
 
 // this will save contours in contour.png
 border.SaveContourSliceImage("contour.png", contour, img.Width, img.Height, false, 0) 
+```
+
+To generate a geometry of the contours from an image file:
+```
+
 ```
 
 

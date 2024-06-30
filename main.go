@@ -14,14 +14,15 @@ import (
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	lng := 150.300446
-	lat := -34.652429
-	scale := 22
+	lng := 151.202462
+	lat := -33.865763
+	scale := 20
 
 	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
-	img3, err := border.LoadImage("../data/florida-from-masktest.png", 1, 1)
+	//img, err := border.LoadImage("../data/florida-from-masktest.png", 1, 1)
+	img, err := border.LoadImage("testimages/sydney-bw.png", 1, 1)
 
-	border.SaveImage("bordertest.png", img3)
+	border.SaveImage("bordertest.png", img)
 
 	PrintMemUsage("image loaded")
 	if err != nil {
@@ -29,21 +30,18 @@ func main() {
 	}
 
 	start := time.Now()
-	cont := border.FindContours(img3)
+	cont := border.FindContours(img)
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
 	PrintMemUsage("found contours")
-	border.SaveContourSliceImage("contour.png", cont, img3.Width, img3.Height, false, 0)
-
-	slippyX = 1160931
-	slippyY = 1772526
+	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
 
 	// If the input image are base off a slippy mask (ie each pixel represents a tile) then we require a slippy converter.
 	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
 
 	// tolerance of 0 means get ConvertContourToPolygon to calculate it
-	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, true, slippyConverter)
+	poly, err := converters.ConvertContourToPolygon(cont, scale, true, 0, 0, true, slippyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to simple polygon : %s", err.Error())
 	}
@@ -54,7 +52,7 @@ func main() {
 	fmt.Printf("convert to simple polygon took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	// tolerance of 0 means get ConvertContourToPolygon to calculate it
-	fullPoly, err := converters.ConvertContourToPolygon(cont, scale, false, 0, true, slippyConverter)
+	fullPoly, err := converters.ConvertContourToPolygon(cont, scale, false, 0, 0, true, slippyConverter)
 	if err != nil {
 		log.Fatalf("Unable to convert to polygon : %s", err.Error())
 	}
