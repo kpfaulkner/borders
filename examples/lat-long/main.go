@@ -21,8 +21,10 @@ func main() {
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
 	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
 
+	// top left of image is at slippy coords 624144, 785126
 	slippyX := 624144.0
 	slippyY := 785126.0
+	
 	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
 
 	// tolerance of 0 means get ConvertContourToPolygon to calculate it
