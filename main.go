@@ -14,8 +14,8 @@ import (
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	lng := 151.202462
-	lat := -33.865763
+	lng := 151.09577747524995
+	lat := -33.92072681353907
 	scale := 20
 
 	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)

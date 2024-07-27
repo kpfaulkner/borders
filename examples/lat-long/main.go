@@ -11,11 +11,8 @@ import (
 )
 
 func main() {
-	lng := 150.300446
-	lat := -34.652429
-
-	scale := 18
-	img, err := border.LoadImage("../../testimages/highres-bw.png", 1, 1)
+	scale := 21
+	img, err := border.LoadImage("../../testimages/testmap-0624144-785126-21.png", 1, 1)
 
 	start := time.Now()
 	cont := border.FindContours(img)
@@ -24,7 +21,8 @@ func main() {
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
 	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
 
-	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
+	slippyX := 624144.0
+	slippyY := 785126.0
 	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
 
 	// tolerance of 0 means get ConvertContourToPolygon to calculate it
