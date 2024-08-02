@@ -14,13 +14,13 @@ import (
 func main() {
 	fmt.Printf("So it begins...\n")
 
-	lng := 151.09577747524995
-	lat := -33.92072681353907
-	scale := 20
+	// example lat/lon of top left of testmap2-1891519-1285047-21.png
+	lng := 144.700927662535
+	lat := -37.5696166965532
+	scale := 21
 
 	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
-	//img, err := border.LoadImage("../data/florida-from-masktest.png", 1, 1)
-	img, err := border.LoadImage("testimages/sydney-bw.png", 1, 1)
+	img, err := border.LoadImage("testimages/testmap2-1891519-1285047-21.png", 1, 1)
 
 	border.SaveImage("bordertest.png", img)
 
