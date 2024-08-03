@@ -1,9 +1,9 @@
 package border
 
 import (
-	"github.com/kpfaulkner/borders/common"
 	"image"
-	"log"
+
+	"github.com/kpfaulkner/borders/common"
 )
 
 var (
@@ -76,7 +76,6 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 	p2 = p1
 	p3 := p0
 
-	done = []bool{false, false, false, false, false, false, false, false}
 	for {
 		dir = calcDir(p3, p2)
 		moved = counterClockwise(dir)
@@ -122,52 +121,6 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 	}
 
 	return border, collisionIndicies
-
-	var err error
-	border, err = filterBorderThroughMapProcessing(border)
-	if err != nil {
-		log.Fatalf("ERROR with filtering : %s\n", err.Error())
-	}
-
-	return border, collisionIndicies
-}
-
-func filterBorderThroughMapProcessing(border []image.Point) ([]image.Point, error) {
-
-	// point to index.
-	pointsIndex := make(map[image.Point]int)
-	newBorder := []image.Point{}
-	for _, currentPoint := range border {
-
-		if index, ok := pointsIndex[currentPoint]; ok {
-			//  already have point at index... so delete everything between index and end of newBorder slice.
-			newBorder = newBorder[:index]
-		} else {
-			newBorder = append(newBorder, currentPoint)
-			pointsIndex[currentPoint] = len(newBorder) - 1
-		}
-	}
-
-	return newBorder, nil
-}
-
-func filterBorderThroughStackProcessing(border []image.Point) ([]image.Point, error) {
-
-	// add first 2...  so checking can happen.
-	newBorder := []image.Point{border[0], border[1]}
-	previousNewIndex := 0
-	for _, currentPoint := range border[2:] {
-		// check if currentPoint is same as previous... if so, modify
-		if newBorder[previousNewIndex] == currentPoint {
-			newBorder = newBorder[:len(newBorder)-1]
-			previousNewIndex--
-		} else {
-			newBorder = append(newBorder, currentPoint)
-			previousNewIndex++
-		}
-	}
-
-	return newBorder, nil
 }
 
 // addCollisionFlag mark contours with collisions with other contours.
@@ -192,8 +145,6 @@ func addCollisionFlag(contour *Contour, parentId int, contours map[int]*Contour,
 // It returns the single parent contour which in turn has all other contours as children or further
 // generations.
 func FindContours(img *common.SuzukiImage) *Contour {
-
-	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	nbd := 1
 	lnbd := 1
 

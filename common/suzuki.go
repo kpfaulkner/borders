@@ -15,7 +15,7 @@ type SuzukiImage struct {
 	dataLen int
 }
 
-// NewSuzukiImage creates a new SuzukiImage of specific dimentions.
+// NewSuzukiImage creates a new SuzukiImage of specific dimensions.
 func NewSuzukiImage(width int, height int) *SuzukiImage {
 	si := SuzukiImage{}
 	si.Width = width

@@ -12,7 +12,6 @@ import (
 
 func main() {
 	scale := 21
-	//img, err := border.LoadImage("../../testimages/testmap-0624144-785126-21.png", 1, 1)
 	img, err := border.LoadImage("../../testimages/testmap2-1891519-1285047-21.png", 1, 1)
 
 	start := time.Now()
