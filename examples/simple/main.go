@@ -34,6 +34,7 @@ func main() {
 	PrintMemUsage("end")
 }
 
+// PrintMemUsage prints memory usage (allocation/GCs to stdout
 func PrintMemUsage(header string) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
