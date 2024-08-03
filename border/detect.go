@@ -1,9 +1,11 @@
 package border
 
 import (
+	"errors"
 	"image"
 
 	"github.com/kpfaulkner/borders/common"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -37,28 +39,32 @@ func move(pixel image.Point, img *common.SuzukiImage, dir int) image.Point {
 }
 
 // calcDir returns index of dirDelta that matches direction taken.
-func calcDir(from image.Point, to image.Point) int {
+func calcDir(from image.Point, to image.Point) (int, error) {
 	delta := to.Sub(from)
 	for i, d := range dirDelta {
 		if d.X == delta.X && d.Y == delta.Y {
-			return i
+			return i, nil
 		}
 	}
 
-	// unsure... blow up for now.
-	panic("BOOOOOOM cant figure out direction")
+	return 0, errors.New("unable to determine direction")
 }
 
 // createBorder returns the slice of Points making up the border/contour
 // Also returns list of nbd's that are colliding with this. Can use to help create
 // tree with collision info later.
-func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) ([]image.Point, map[int]bool) {
+func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) ([]image.Point, map[int]bool, error) {
 
 	// track which borders have conflicts
 	collisionIndicies := make(map[int]bool)
 
 	border := []image.Point{}
-	dir := calcDir(p0, p2)
+	dir, err := calcDir(p0, p2)
+	if err != nil {
+		log.Errorf("unable to determine direction: %s", err.Error())
+		return nil, nil, err
+	}
+
 	moved := clockwise(dir)
 	p1 := image.Point{0, 0}
 	for moved != dir {
@@ -71,13 +77,17 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 	}
 
 	if p1.X == 0 && p1.Y == 0 {
-		return []image.Point{}, collisionIndicies
+		return []image.Point{}, collisionIndicies, nil
 	}
 	p2 = p1
 	p3 := p0
 
 	for {
-		dir = calcDir(p3, p2)
+		dir, err = calcDir(p3, p2)
+		if err != nil {
+			log.Errorf("unable to determine direction: %s", err.Error())
+			return nil, nil, err
+		}
 		moved = counterClockwise(dir)
 		p4 := image.Point{0, 0}
 		done = []bool{false, false, false, false, false, false, false, false}
@@ -120,7 +130,7 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 		p3 = p4
 	}
 
-	return border, collisionIndicies
+	return border, collisionIndicies, nil
 }
 
 // addCollisionFlag mark contours with collisions with other contours.
@@ -144,7 +154,7 @@ func addCollisionFlag(contour *Contour, parentId int, contours map[int]*Contour,
 // FindContours takes a SuzukiImage (basic 2d slice) and determines the Contours that are present.
 // It returns the single parent contour which in turn has all other contours as children or further
 // generations.
-func FindContours(img *common.SuzukiImage) *Contour {
+func FindContours(img *common.SuzukiImage) (*Contour, error) {
 	nbd := 1
 	lnbd := 1
 
@@ -195,7 +205,12 @@ func FindContours(img *common.SuzukiImage) *Contour {
 				}
 
 				p0 := image.Point{j, i}
-				border, collectionIndices := createBorder(img, p0, from, nbd, done)
+				border, collectionIndices, err := createBorder(img, p0, from, nbd, done)
+				if err != nil {
+					log.Errorf("unable to create border: %s", err.Error())
+					return nil, err
+				}
+
 				if len(border) == 0 {
 					border = append(border, p0)
 					img.Set(p0, -1*nbd)
@@ -220,5 +235,5 @@ func FindContours(img *common.SuzukiImage) *Contour {
 			}
 		}
 	}
-	return contours[1]
+	return contours[1], nil
 }
