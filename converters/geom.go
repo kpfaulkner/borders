@@ -39,12 +39,12 @@ func LatLongToSlippy(latDegrees float64, longDegrees float64, scale int) (float6
 // ConvertContourToPolygon converts the contours (set of x/y coords) to geometries commonly used in the GIS space
 // Convert to polygons, then simplify (if required) while still in "pixel space"
 // Only then apply conversions which may be to lat/long (or any other conversions).
-// Simplifying while in "pixel space" simplifies the simplification tolerance calculation.
+// Simplifying while in "pixel space" simplifies the simplification degTolerance calculation.
 // params:
 //
 //		simplify: Simplify the resulting polygons
 //	    minPoints: Minimum number of vertices for a polygon to be considered valid. If less than this, then will be discarded. 0 means no minimum
-//		tolerance: Tolerance in pixels when simplifying. If set to 0, then will use defaults.
+//		degTolerance: Tolerance in pixels when simplifying. If set to 0, then will use defaults.
 //		multiPolygonOnly: If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
 //		pointConverters: Used to convert point co-ord systems. eg. slippy to lat/long.
 func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, minPoints int, tolerance float64, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
@@ -201,10 +201,9 @@ func pointsToSequence(points []image.Point) geom.Sequence {
 
 // slippyCoordsToLongLat converts to lat/long... and requires the slippy offset of top left corner of area.
 func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile float64, yTile float64, latLongN float64) (float64, float64) {
-	//n := math.Pow(2, float64(scale))
-
 	x := xTile + slippyXOffset
 	y := yTile + slippyYOffset
+
 	longDeg := (x/latLongN)*360.0 - 180.0
 	latRad := math.Atan(math.Sinh(math.Pi - (y/latLongN)*2*math.Pi))
 	latDeg := latRad * (180.0 / math.Pi)

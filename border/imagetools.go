@@ -2,13 +2,14 @@ package border
 
 import (
 	"fmt"
-	"github.com/kpfaulkner/borders/common"
-	image2 "github.com/kpfaulkner/borders/image"
 	"image"
 	"image/color"
 	"image/png"
 	_ "image/png"
 	"os"
+
+	"github.com/kpfaulkner/borders/common"
+	image2 "github.com/kpfaulkner/borders/image"
 )
 
 // LoadImage loads a PNG and returns a SuzukiImage.
@@ -37,7 +38,6 @@ func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, err
 			cc := 0
 			c := img.At(x, y)
 			r, g, b, _ := c.RGBA()
-			//fmt.Printf("%d %d %d %d\n", r, g, b, a)
 			if !(r == 0 && g == 0 && b == 0) {
 				cc = 1
 			}
