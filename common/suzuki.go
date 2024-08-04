@@ -25,6 +25,15 @@ func NewSuzukiImage(width int, height int) *SuzukiImage {
 	return &si
 }
 
+func NewSuzukiImageFromData(width int, height int, data []int) *SuzukiImage {
+	si := SuzukiImage{}
+	si.Width = width
+	si.Height = height
+	si.data = data[:]
+	si.dataLen = len(data)
+	return &si
+}
+
 // Get returns the value of a given point
 func (si *SuzukiImage) Get(p image.Point) int {
 	idx := p.Y*si.Width + p.X
@@ -62,4 +71,17 @@ func (si *SuzukiImage) DisplayAsText() []string {
 	}
 
 	return s
+}
+
+func (si *SuzukiImage) Equals(other *SuzukiImage) bool {
+	if si.Width != other.Width || si.Height != other.Height {
+		return false
+	}
+
+	for i := 0; i < si.dataLen; i++ {
+		if si.data[i] != other.data[i] {
+			return false
+		}
+	}
+	return true
 }
