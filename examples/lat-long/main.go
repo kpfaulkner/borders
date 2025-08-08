@@ -22,9 +22,12 @@ func main() {
 	}
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
-	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
+	// save the contour as an image.
 	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
 
+	// create a slippy map converter so we can generate a multipolygon that has the latitude/longitude
+	// geojson.
+	// This means that we need to know the slippy X/Y coords of the top left corner of the map
 	slippyX := 1891519.0
 	slippyY := 1285047.0
 	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
@@ -39,7 +42,4 @@ func main() {
 	os.WriteFile("final.geojson", j, 0644)
 
 	fmt.Printf("convert to polygon took %d ms\n", time.Now().Sub(start).Milliseconds())
-	b, _ := poly.MarshalJSON()
-	fmt.Printf("%s\n", string(b))
-
 }

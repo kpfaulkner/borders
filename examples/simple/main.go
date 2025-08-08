@@ -21,9 +21,7 @@ func displayContour(cont border.Contour) {
 
 func main() {
 	PrintMemUsage("beginning")
-	//img, err := border.LoadImage("../../testimages/mini.png", 1, 1)
-	img, err := border.LoadImage("../../testimages/florida.png", 1, 1)
-	//img, err := border.LoadImage(`c:\temp\test3.png`, 1, 1)
+	img, err := border.LoadImage("../../testimages/mini.png", 1, 1)
 	PrintMemUsage("image loaded")
 	if err != nil {
 		panic("BOOM " + err.Error())
@@ -36,7 +34,7 @@ func main() {
 		fmt.Printf("Unable to find contours : %s", err.Error())
 		return
 	}
-	
+
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 	displayContour(*cont)
 	PrintMemUsage("end")

@@ -28,8 +28,24 @@ border.SaveContourSliceImage("contour.png", contour, img.Width, img.Height, fals
 
 To generate a geometry of the contours from an image file:
 ```
+	img, _ := border.LoadImage("someimage.png", 1, 1)
+	cont, _ := border.FindContours(img)
+	
+	// create a slippy map converter so we can generate a multipolygon that has the latitude/longitude
+	// geojson.
+	// This means that we need to know the slippy X/Y coords of the top left corner of the map
+	slippyX := 1891519.0
+	slippyY := 1285047.0
+	slippyConverter := converters.NewSlippyToLatLongConverter(slippyX, slippyY, scale)
 
+	// tolerance of 0 means get ConvertContourToPolygon to calculate it
+	poly, _ := converters.ConvertContourToPolygon(cont, scale, true, 0, 0, true, slippyConverter)
+	
+	j, _ := poly.MarshalJSON()
+	fmt.Printf("geojson: %s\n", string(j))
 ```
+
+The resulting geojson can be put into any GIS system or viewer (eg geojson.io)
 
 
 ## Test coverage

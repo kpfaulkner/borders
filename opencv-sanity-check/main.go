@@ -18,9 +18,7 @@ func displayContour(cont border.Contour) {
 	}
 }
 func main() {
-	fmt.Printf("So it begins...\n")
-
-	img, _ := border.LoadImage("testbig.png", 0, 0)
+	img, _ := border.LoadImage("test.png", 0, 0)
 
 	start := time.Now()
 	cont, _ := border.FindContours(img)
