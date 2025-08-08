@@ -6,6 +6,7 @@ import (
 
 // Erode the suzuki image, based on Morphological Erosion
 // https://en.wikipedia.org/wiki/Erosion_(morphology)
+// Although based on the above, we always need to make sure the border of the image is all 0.
 func Erode(img *common.SuzukiImage, radius int) (*common.SuzukiImage, error) {
 
 	img2 := common.NewSuzukiImage(img.Width, img.Height)

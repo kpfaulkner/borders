@@ -1,9 +1,10 @@
 package border
 
 import (
-	"fmt"
 	"image"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -53,18 +54,29 @@ func NewContour(id int) *Contour {
 	return &c
 }
 
-// AddPoint adds a point (image.Point) to the contour
-func (c *Contour) AddPoint(p image.Point) error {
-	c.Points = append(c.Points, p)
-	return nil
+// GetAllPoints returns all points in the contour and all children.
+func (c *Contour) GetAllPoints() []image.Point {
+
+	var allPoints []image.Point
+
+	for _, p := range c.Points {
+		allPoints = append(allPoints, p)
+	}
+
+	for _, ch := range c.Children {
+		points := ch.GetAllPoints()
+		allPoints = append(allPoints, points...)
+	}
+
+	return allPoints
 }
 
-// ContourStats generates writes to stdout stats about the contour and all children.
+// ContourStats generates writes the stats to a log about the contour and all children.
 // Primarily used for debugging
 func ContourStats(c *Contour, offset int) {
 	if len(c.Points) > 0 {
 		pad := strings.Repeat(" ", offset)
-		fmt.Printf("%s%d : len %d :  no kids %d : no col %d : col with parent %+v\n", pad, c.Id, len(c.Points), len(c.Children), len(c.ConflictingContours), c.ParentCollision)
+		log.Debugf("%s%d : len %d :  no kids %d : no col %d : col with parent %+v\n", pad, c.Id, len(c.Points), len(c.Children), len(c.ConflictingContours), c.ParentCollision)
 	}
 
 	for _, ch := range c.Children {
@@ -78,7 +90,7 @@ func ContourStatsWithCollisions(c *Contour, offset int) {
 	if len(c.Points) > 0 {
 		if len(c.ConflictingContours) > 0 {
 			pad := strings.Repeat(" ", offset)
-			fmt.Printf("%s%d : len %d :  no kids %d : no col %d : col with parent %+v\n", pad, c.Id, len(c.Points), len(c.Children), len(c.ConflictingContours), c.ParentCollision)
+			log.Debugf("%s%d : len %d :  no kids %d : no col %d : col with parent %+v\n", pad, c.Id, len(c.Points), len(c.Children), len(c.ConflictingContours), c.ParentCollision)
 		}
 	}
 

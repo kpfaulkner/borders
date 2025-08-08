@@ -39,12 +39,12 @@ func LatLongToSlippy(latDegrees float64, longDegrees float64, scale int) (float6
 // ConvertContourToPolygon converts the contours (set of x/y coords) to geometries commonly used in the GIS space
 // Convert to polygons, then simplify (if required) while still in "pixel space"
 // Only then apply conversions which may be to lat/long (or any other conversions).
-// Simplifying while in "pixel space" simplifies the simplification tolerance calculation.
+// Simplifying while in "pixel space" simplifies the simplification degTolerance calculation.
 // params:
 //
 //		simplify: Simplify the resulting polygons
 //	    minPoints: Minimum number of vertices for a polygon to be considered valid. If less than this, then will be discarded. 0 means no minimum
-//		tolerance: Tolerance in pixels when simplifying. If set to 0, then will use defaults.
+//		degTolerance: Tolerance in pixels when simplifying. If set to 0, then will use defaults.
 //		multiPolygonOnly: If the geometry is results in a GeometryCollection, then extract out the multipolygon part and return that.
 //		pointConverters: Used to convert point co-ord systems. eg. slippy to lat/long.
 func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, minPoints int, tolerance float64, multiPolygonOnly bool, pointConverters ...PointConverter) (*geom.Geometry, error) {
@@ -73,18 +73,22 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, minPoi
 				return returnConvertedGeometry(&mp, pointConverters...)
 			}
 
+			////////////////////////
+			// Need to check if this is still possible.
 			// need to check when we get geometrycollection vs multipolygon
-			if simplifiedGeom.Type() == geom.TypeGeometryCollection {
-				gc, ok := simplifiedGeom.AsGeometryCollection()
-				if ok {
-					mp, err := filterMultiPolygonFromGeometryCollection(&gc)
-					if err == nil {
-						return returnConvertedGeometry(mp, pointConverters...)
-					}
-				}
-			}
+			//if simplifiedGeom.Type() == geom.TypeGeometryCollection {
+			//	gc, ok := simplifiedGeom.AsGeometryCollection()
+			//	if ok {
+			//		mp, err := filterMultiPolygonFromGeometryCollection(&gc)
+			//		if err == nil {
+			//			return returnConvertedGeometry(mp, pointConverters...)
+			//		}
+			//	}
+			//}
+			////////////////////////
 			return nil, errors.New("unable to filter multipolygon from geometry collection")
 		}
+
 		mp, ok := simplifiedGeom.AsMultiPolygon()
 		if ok {
 			return returnConvertedGeometry(&mp, pointConverters...)
@@ -201,10 +205,9 @@ func pointsToSequence(points []image.Point) geom.Sequence {
 
 // slippyCoordsToLongLat converts to lat/long... and requires the slippy offset of top left corner of area.
 func slippyCoordsToLongLat(slippyXOffset float64, slippyYOffset float64, xTile float64, yTile float64, latLongN float64) (float64, float64) {
-	//n := math.Pow(2, float64(scale))
-
 	x := xTile + slippyXOffset
 	y := yTile + slippyYOffset
+
 	longDeg := (x/latLongN)*360.0 - 180.0
 	latRad := math.Atan(math.Sinh(math.Pi - (y/latLongN)*2*math.Pi))
 	latDeg := latRad * (180.0 / math.Pi)
@@ -243,25 +246,3 @@ func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*ge
 
 	return nil, errors.New("no multipolygon found in geometry collection")
 }
-
-// FIXME(kpfaulkner) really cant remember the reason for the logic with this.
-// ///////// potentially delete
-func NewPixelXYToLatLongConverter(latCentre float64, lonCentre float64, scale float64, imageWidth float64, imageHeight float64) func(X float64, Y float64) (float64, float64) {
-	f := func(x float64, y float64) (float64, float64) {
-		lat, lon := XYToLatLong(latCentre, lonCentre, int(scale), imageWidth, imageHeight, x, y)
-		return lat, lon
-	}
-	return f
-}
-
-func XYToLatLong(latCentre float64, lonCentre float64, scale int, imageWidth float64, imageHeight float64, x float64, y float64) (float64, float64) {
-	parallelMultiplier := math.Cos(latCentre * math.Pi / 180)
-	degreesPerPixelX := 360 / math.Pow(2, float64(scale+8))
-	degreesPerPixelY := 360 / math.Pow(2, float64(scale+8)) * parallelMultiplier
-	pointLat := latCentre - degreesPerPixelY*(y-imageHeight/2)
-	pointLng := lonCentre + degreesPerPixelX*(x-imageWidth/2)
-
-	return pointLng, pointLat
-}
-
-/////////////////////////////////
