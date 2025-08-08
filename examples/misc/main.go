@@ -17,6 +17,6 @@ func main() {
 	newLon, newLat := conv(x, y)
 
 	fmt.Printf("orig long %f lat %f\n", lng, lat)
-	fmt.Printf("slippy %d %d\n", x, y)
+	fmt.Printf("slippy %f %f\n", x, y)
 	fmt.Printf("new long %f lat %f\n", newLon, newLat)
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kpfaulkner/borders/border"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -20,7 +21,12 @@ func main() {
 	PrintMemUsage("image loaded")
 
 	start := time.Now()
-	cont := border.FindContours(img)
+	cont, err := border.FindContours(img)
+	if err != nil {
+		log.Fatalf("Unable to find contours: %s", err.Error())
+		return
+	}
+
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
