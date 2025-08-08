@@ -73,18 +73,22 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, minPoi
 				return returnConvertedGeometry(&mp, pointConverters...)
 			}
 
+			////////////////////////
+			// Need to check if this is still possible.
 			// need to check when we get geometrycollection vs multipolygon
-			if simplifiedGeom.Type() == geom.TypeGeometryCollection {
-				gc, ok := simplifiedGeom.AsGeometryCollection()
-				if ok {
-					mp, err := filterMultiPolygonFromGeometryCollection(&gc)
-					if err == nil {
-						return returnConvertedGeometry(mp, pointConverters...)
-					}
-				}
-			}
+			//if simplifiedGeom.Type() == geom.TypeGeometryCollection {
+			//	gc, ok := simplifiedGeom.AsGeometryCollection()
+			//	if ok {
+			//		mp, err := filterMultiPolygonFromGeometryCollection(&gc)
+			//		if err == nil {
+			//			return returnConvertedGeometry(mp, pointConverters...)
+			//		}
+			//	}
+			//}
+			////////////////////////
 			return nil, errors.New("unable to filter multipolygon from geometry collection")
 		}
+
 		mp, ok := simplifiedGeom.AsMultiPolygon()
 		if ok {
 			return returnConvertedGeometry(&mp, pointConverters...)
@@ -242,25 +246,3 @@ func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*ge
 
 	return nil, errors.New("no multipolygon found in geometry collection")
 }
-
-// FIXME(kpfaulkner) really cant remember the reason for the logic with this.
-// ///////// potentially delete
-func NewPixelXYToLatLongConverter(latCentre float64, lonCentre float64, scale float64, imageWidth float64, imageHeight float64) func(X float64, Y float64) (float64, float64) {
-	f := func(x float64, y float64) (float64, float64) {
-		lat, lon := XYToLatLong(latCentre, lonCentre, int(scale), imageWidth, imageHeight, x, y)
-		return lat, lon
-	}
-	return f
-}
-
-func XYToLatLong(latCentre float64, lonCentre float64, scale int, imageWidth float64, imageHeight float64, x float64, y float64) (float64, float64) {
-	parallelMultiplier := math.Cos(latCentre * math.Pi / 180)
-	degreesPerPixelX := 360 / math.Pow(2, float64(scale+8))
-	degreesPerPixelY := 360 / math.Pow(2, float64(scale+8)) * parallelMultiplier
-	pointLat := latCentre - degreesPerPixelY*(y-imageHeight/2)
-	pointLng := lonCentre + degreesPerPixelX*(x-imageWidth/2)
-
-	return pointLng, pointLat
-}
-
-/////////////////////////////////

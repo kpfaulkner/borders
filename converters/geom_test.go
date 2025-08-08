@@ -3,6 +3,8 @@ package converters
 import (
 	"math"
 	"testing"
+
+	"github.com/kpfaulkner/borders/border"
 )
 
 const (
@@ -44,6 +46,72 @@ func TestNewSlippyToLatLongConverter(t *testing.T) {
 				t.Errorf("expected lat %f, got %f", tc.expectedLat, lat)
 			}
 		})
+	}
+}
+
+func TestMultiPolygonOnlyConvertContourToPolygon(t *testing.T) {
+
+	testImage, err := border.LoadImage(`../testimages/unittest1.png`, 1, 1)
+	if err != nil {
+		t.Errorf("Unable to load test image: %s", err.Error())
+	}
+
+	cont, err := border.FindContours(testImage)
+	if err != nil {
+		t.Fatalf("Unable to find contours: %s", err.Error())
+	}
+
+	poly, err := ConvertContourToPolygon(cont, 21, true, 0, 0, true)
+	if err != nil {
+		t.Fatalf("Unable to convert to simple polygon: %s", err.Error())
+	}
+
+	if poly.AsText() != "MULTIPOLYGON(((1 1,1 34,33 34,33 28,28 28,27 27,25 27,23 25,23 24,22 23,23 22,23 20,29 14,30 15,30 17,32 17,32 15,30 15,29 14,29 12,31 10,31 7,30 7,29 6,30 5,33 5,33 1,1 1),(23 8,24 7,25 8,25 9,24 10,23 9,23 8),(17 9,18 8,19 9,18 10,17 9)))" {
+		t.Errorf("expected polygon to be MULTIPOLYGON(((1 1,1 34,33 34,33 28,28 28,27 27,25 27,23 25,23 24,22 23,23 22,23 20,29 14,30 15,30 17,32 17,32 15,30 15,29 14,29 12,31 10,31 7,30 7,29 6,30 5,33 5,33 1,1 1),(23 8,24 7,25 8,25 9,24 10,23 9,23 8),(17 9,18 8,19 9,18 10,17 9))), got %s", poly.AsText())
+	}
+}
+
+func TestMultiPolygonConvertContourToPolygon(t *testing.T) {
+
+	testImage, err := border.LoadImage(`../testimages/unittest2.png`, 1, 1)
+	if err != nil {
+		t.Errorf("Unable to load test image: %s", err.Error())
+	}
+
+	cont, err := border.FindContours(testImage)
+	if err != nil {
+		t.Fatalf("Unable to find contours: %s", err.Error())
+	}
+
+	poly, err := ConvertContourToPolygon(cont, 21, true, 0, 0, false)
+	if err != nil {
+		t.Fatalf("Unable to convert to simple polygon: %s", err.Error())
+	}
+
+	if poly.AsText() != "MULTIPOLYGON(((1 1,1 6,4 6,4 4,3 3,3 1,1 1)))" {
+		t.Errorf("expected polygon to be MULTIPOLYGON(((1 1,1 6,4 6,4 4,3 3,3 1,1 1))), got %s", poly.AsText())
+	}
+}
+
+func TestNotSimplifiedMultiPolygonConvertContourToPolygon(t *testing.T) {
+
+	testImage, err := border.LoadImage(`../testimages/unittest2.png`, 1, 1)
+	if err != nil {
+		t.Errorf("Unable to load test image: %s", err.Error())
+	}
+
+	cont, err := border.FindContours(testImage)
+	if err != nil {
+		t.Fatalf("Unable to find contours: %s", err.Error())
+	}
+
+	poly, err := ConvertContourToPolygon(cont, 21, false, 0, 0, false)
+	if err != nil {
+		t.Fatalf("Unable to convert to simple polygon: %s", err.Error())
+	}
+
+	if poly.AsText() != "MULTIPOLYGON(((1 1,1 2,1 3,1 4,1 5,1 6,2 6,3 6,4 6,4 5,4 4,3 3,3 2,3 1,2 1,1 1)))" {
+		t.Errorf("expected polygon to be MULTIPOLYGON(((1 1,1 2,1 3,1 4,1 5,1 6,2 6,3 6,4 6,4 5,4 4,3 3,3 2,3 1,2 1,1 1))), got %s", poly.AsText())
 	}
 }
 
