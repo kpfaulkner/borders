@@ -1,7 +1,9 @@
 package border
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"image"
 
 	"github.com/kpfaulkner/borders/common"
@@ -210,6 +212,9 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 					log.Errorf("unable to create border: %s", err.Error())
 					return nil, err
 				}
+				fmt.Printf("XXXXX %#v\n", border)
+				data, _ := json.Marshal(border)
+				fmt.Println(string(data))
 
 				if len(border) == 0 {
 					border = append(border, p0)

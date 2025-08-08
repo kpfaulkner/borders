@@ -26,12 +26,15 @@ func NewSuzukiImage(width int, height int) *SuzukiImage {
 }
 
 func NewSuzukiImageFromData(width int, height int, data []int) *SuzukiImage {
-	si := SuzukiImage{}
-	si.Width = width
-	si.Height = height
+	si := NewSuzukiImage(width, height)
 	si.data = data[:]
 	si.dataLen = len(data)
-	return &si
+	return si
+}
+
+// Get returns the value of a given point
+func (si *SuzukiImage) GetAllData() []int {
+	return si.data
 }
 
 // Get returns the value of a given point
