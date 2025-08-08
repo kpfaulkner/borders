@@ -28,7 +28,10 @@ func main() {
 	}
 
 	start := time.Now()
-	cont := border.FindContours(img)
+	cont, err := border.FindContours(img)
+	if err != nil {
+		panic("BOOM " + err.Error())
+	}
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 	displayContour(*cont)
 	PrintMemUsage("end")

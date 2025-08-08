@@ -15,7 +15,10 @@ func main() {
 	img, err := border.LoadImage("../../testimages/testmap2-1891519-1285047-21.png", 1, 1)
 
 	start := time.Now()
-	cont := border.FindContours(img)
+	cont, err := border.FindContours(img)
+	if err != nil {
+		panic("BOOM " + err.Error())
+	}
 	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
 
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
