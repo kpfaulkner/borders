@@ -16,6 +16,7 @@ const (
 
 type PointConverter func(x float64, y float64) (float64, float64)
 
+// NewSlippyToLatLongConverter returns a function that converts slippy tile coordinates to lat/long.
 func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, scale int) func(X float64, Y float64) (float64, float64) {
 	latLongN := math.Pow(2, float64(scale))
 	f := func(x float64, y float64) (float64, float64) {
@@ -25,6 +26,7 @@ func NewSlippyToLatLongConverter(slippyXOffset float64, slippyYOffset float64, s
 	return f
 }
 
+// LatLongToSlippy converts lat/long to slippy tile coordinates.
 func LatLongToSlippy(latDegrees float64, longDegrees float64, scale int) (float64, float64) {
 	n := math.Exp2(float64(scale))
 	x := int(math.Floor((longDegrees + 180.0) / 360.0 * n))
@@ -99,6 +101,8 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, minPoi
 	return returnConvertedGeometry(&mp, pointConverters...)
 }
 
+// returnConvertedGeometry converts the multipolygon with PointConverters (if supplied)
+// Can be used to help convert to lat/long or any other co-ordinate system.
 func returnConvertedGeometry(mp *geom.MultiPolygon, pointConverters ...PointConverter) (*geom.Geometry, error) {
 	finalMultiPoly, err := convertCoords(mp, pointConverters...)
 	if err != nil {
@@ -108,6 +112,7 @@ func returnConvertedGeometry(mp *geom.MultiPolygon, pointConverters ...PointConv
 	return &g, nil
 }
 
+// convertCoords converts the coordinates of a multipolygon using the supplied PointConverters.
 func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) (*geom.MultiPolygon, error) {
 
 	mp2 := mp.TransformXY(func(xy geom.XY) geom.XY {
@@ -126,6 +131,7 @@ func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) (*geom.M
 
 }
 
+// generateLineString generates a LineString from a slice of image.Points.
 func generateLineString(points []image.Point) (*geom.LineString, error) {
 	seq := pointsToSequence(points)
 
@@ -187,6 +193,7 @@ func convertContourToPolygons(c *border.Contour, minPoints int, polygons *[]geom
 	return nil
 }
 
+// pointsToSequence converts a slice of image.Points to a geom.Sequence.
 func pointsToSequence(points []image.Point) geom.Sequence {
 	s := len(points)*2 + 2
 	seq := make([]float64, s, s)
@@ -233,6 +240,7 @@ func metresPerPixel(scale int) float64 {
 	return tileSizeInMetres(scale) / 256.0
 }
 
+// filterMultiPolygonFromGeometryCollection currently unused. Will be used in upcoming version.
 func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*geom.MultiPolygon, error) {
 	var mp geom.MultiPolygon
 	var ok bool

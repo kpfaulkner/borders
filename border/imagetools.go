@@ -13,9 +13,9 @@ import (
 )
 
 // LoadImage loads a PNG and returns a SuzukiImage.
-// This may change since SuzukiImage may not really be required.
-// erode flag forces the eroding of the image before converting to a SuzukiImage.
-// This is to remove any "spikes" that may appear in the generated boundary.
+// Erode parameter forces the eroding of the image before converting to a SuzukiImage.
+// Dilate parameter forces the dilating of the image before converting to a SuzukiImage.
+// The combination of Erode and Dilate helps remove any "spikes" that may appear in the generated boundary.
 func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, error) {
 
 	f, err := os.Open(filename)
@@ -88,6 +88,10 @@ func SaveImage(filename string, si *common.SuzukiImage) error {
 }
 
 // SaveContourSliceImage saves a contour (and all child contours) as a PNG.
+// Width and height are the dimensions of the image to save.
+// flipBook is a bool to indicate that when each child contour is added to the image, the image should be
+// saved to a new file with the filename suffixed with the count of contours added so far. This is useful
+// for debugging and visualising the contours as they are added.
 func SaveContourSliceImage(filename string, c *Contour, width int, height int, flipBook bool, minContourSize int) error {
 
 	upLeft := image.Point{0, 0}
@@ -111,7 +115,7 @@ func SaveContourSliceImage(filename string, c *Contour, width int, height int, f
 	return nil
 }
 
-// drawContour saves a contour to the provided image and then recursively calls to save children to same image
+// drawContour saves a contour to the provided image and then recursively calls to save children to same image.
 func drawContour(img *image.RGBA, c *Contour, flipBook bool, minContourSize int, colour int, count *int, filename string) error {
 
 	colours := []color.RGBA{

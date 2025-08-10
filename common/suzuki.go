@@ -6,8 +6,7 @@ import (
 	"strings"
 )
 
-// SuzukiImage is the basic structure we use to define an image.
-// Will probably replace with something more optimal if required
+// SuzukiImage is the basic structure we use to define an image when trying to find contours.
 type SuzukiImage struct {
 	Width   int
 	Height  int
@@ -76,6 +75,7 @@ func (si *SuzukiImage) DisplayAsText() []string {
 	return s
 }
 
+// Equals checks if two SuzukiImages are equal.
 func (si *SuzukiImage) Equals(other *SuzukiImage) bool {
 	if si.Width != other.Width || si.Height != other.Height {
 		return false
