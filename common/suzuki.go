@@ -12,20 +12,29 @@ type SuzukiImage struct {
 	Height  int
 	data    []int
 	dataLen int
+
+	// Indicates if a 1 pixel padding has been applied to around the image.
+	// This helps with imagery where it goes RIGHT up to the edge.
+	hasPadding bool
 }
 
 // NewSuzukiImage creates a new SuzukiImage of specific dimensions.
-func NewSuzukiImage(width int, height int) *SuzukiImage {
+func NewSuzukiImage(width int, height int, hasPadding bool) *SuzukiImage {
 	si := SuzukiImage{}
-	si.Width = width
-	si.Height = height
-	si.data = make([]int, width*height)
-	si.dataLen = width * height // just saves us calculating a lot
+	padding := 0
+	if hasPadding {
+		padding = 2
+	}
+	si.Width = width + padding
+	si.Height = height + padding
+	si.data = make([]int, si.Width*si.Height)
+	si.dataLen = si.Width * si.Height // just saves us calculating a lot
+	si.hasPadding = hasPadding
 	return &si
 }
 
-func NewSuzukiImageFromData(width int, height int, data []int) *SuzukiImage {
-	si := NewSuzukiImage(width, height)
+func NewSuzukiImageFromData(width int, height int, hasPadding bool, data []int) *SuzukiImage {
+	si := NewSuzukiImage(width, height, hasPadding)
 	si.data = data[:]
 	si.dataLen = len(data)
 	return si
@@ -58,6 +67,10 @@ func (si *SuzukiImage) Set(p image.Point, val int) {
 func (si *SuzukiImage) SetXY(x int, y int, val int) {
 	idx := y*si.Width + x
 	si.data[idx] = val
+}
+
+func (si *SuzukiImage) HasPadding() bool {
+	return si.hasPadding
 }
 
 // DisplayAsText generates a string of a given image. This is purely used for debugging SMALL images

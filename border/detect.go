@@ -235,5 +235,22 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 			}
 		}
 	}
-	return contours[1], nil
+
+	finalContour := contours[1]
+	// image was padded... so now shift every co-ord by -1,-1
+	if img.HasPadding() {
+		shiftContour(finalContour)
+	}
+	return finalContour, nil
+}
+
+func shiftContour(contour *Contour) {
+	for i, _ := range contour.Points {
+		contour.Points[i].X = contour.Points[i].X - 1
+		contour.Points[i].Y = contour.Points[i].Y - 1
+	}
+
+	for _, child := range contour.Children {
+		shiftContour(child)
+	}
 }

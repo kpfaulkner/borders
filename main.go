@@ -20,7 +20,7 @@ func main() {
 	scale := 21
 
 	slippyX, slippyY := converters.LatLongToSlippy(lat, lng, scale)
-	img, err := border.LoadImage("testimages/testcase.png", 1, 1)
+	img, err := border.LoadImage(`c:\temp\testcase2.png`, 1, 1)
 
 	border.SaveImage("bordertest.png", img)
 

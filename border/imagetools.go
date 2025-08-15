@@ -29,8 +29,17 @@ func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, err
 		return nil, err
 	}
 
+	// If any pixels on the edges are populated, then we need to pad this out by 1 pixel on each side.
+	// This will be reversed later.
+	requirePadding := doesImageRequirePadding(img)
+
 	// need border to be black. Pad edges with 1 black pixel
-	si := common.NewSuzukiImage(img.Bounds().Dx(), img.Bounds().Dy())
+	si := common.NewSuzukiImage(img.Bounds().Dx(), img.Bounds().Dy(), requirePadding)
+
+	paddingOffset := 0
+	if requirePadding {
+		paddingOffset = 1
+	}
 
 	// dumb... but convert to own image format for now.
 	for y := 0; y < img.Bounds().Dy(); y++ {
@@ -41,7 +50,7 @@ func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, err
 			if !(r == 0 && g == 0 && b == 0) {
 				cc = 1
 			}
-			si.SetXY(x, y, cc)
+			si.SetXY(x+paddingOffset, y+paddingOffset, cc)
 		}
 
 	}
@@ -61,6 +70,46 @@ func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, err
 	}
 
 	return si, nil
+}
+
+// check down each edge to see if populated, if so, it will require padding
+func doesImageRequirePadding(img image.Image) bool {
+
+	// down left/right edge
+	for y := 0; y < img.Bounds().Dy(); y++ {
+		leftEdgeX := 0
+		c := img.At(leftEdgeX, y)
+		r, g, b, _ := c.RGBA()
+		if !(r == 0 && g == 0 && b == 0) {
+			return true
+		}
+
+		rightEdgeX := img.Bounds().Dx() - 1
+		c = img.At(rightEdgeX, y)
+		r, g, b, _ = c.RGBA()
+		if !(r == 0 && g == 0 && b == 0) {
+			return true
+		}
+	}
+
+	// across top and bottom
+	for x := 0; x < img.Bounds().Dx(); x++ {
+		topEdgeY := 0
+		c := img.At(x, topEdgeY)
+		r, g, b, _ := c.RGBA()
+		if !(r == 0 && g == 0 && b == 0) {
+			return true
+		}
+
+		bottomEdgeY := img.Bounds().Dy() - 1
+		c = img.At(x, bottomEdgeY)
+		r, g, b, _ = c.RGBA()
+		if !(r == 0 && g == 0 && b == 0) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // SaveImage saves a SuzukiImage to filename

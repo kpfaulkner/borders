@@ -9,7 +9,7 @@ import (
 // Although based on the above, we always need to make sure the border of the image is all 0.
 func Erode(img *common.SuzukiImage, radius int) (*common.SuzukiImage, error) {
 
-	img2 := common.NewSuzukiImage(img.Width, img.Height)
+	img2 := common.NewSuzukiImage(img.Width, img.Height, img.HasPadding())
 	for y := 0; y < img.Height; y++ {
 		for x := 0; x < img.Width; x++ {
 
@@ -52,7 +52,7 @@ func checkErodeRadius(img *common.SuzukiImage, x int, y int, width int, height i
 // Dilate the suzuki image, based on Morphological Dilation
 // https://en.wikipedia.org/wiki/Dilation_(morphology)
 func Dilate(img *common.SuzukiImage, radius int) (*common.SuzukiImage, error) {
-	img2 := common.NewSuzukiImage(img.Width, img.Height)
+	img2 := common.NewSuzukiImage(img.Width, img.Height, img.HasPadding())
 
 	for y := 0; y < img.Height; y++ {
 		for x := 0; x < img.Width; x++ {

@@ -70,7 +70,7 @@ func TestErode(t *testing.T) {
 				return
 			}
 
-			expectedImage := common.NewSuzukiImageFromData(tc.width, tc.height, tc.expectedResultData)
+			expectedImage := common.NewSuzukiImageFromData(tc.width, tc.height, false, tc.expectedResultData)
 			if !resultImage.Equals(expectedImage) {
 				t.Errorf("result image differs from expected")
 			}
@@ -78,7 +78,7 @@ func TestErode(t *testing.T) {
 	}
 }
 
-// TestDilate tests dilating of Suzuki Image
+// TestDilate tests dilating of Suzuki Imageq
 func TestDilate(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -105,7 +105,7 @@ func TestDilate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			incomingImage := common.NewSuzukiImageFromData(tc.width, tc.height, tc.imageData)
+			incomingImage := common.NewSuzukiImageFromData(tc.width, tc.height, false, tc.imageData)
 			resultImage, err := Dilate(incomingImage, tc.radius)
 
 			// expected error but didn't get it
@@ -123,7 +123,7 @@ func TestDilate(t *testing.T) {
 				return
 			}
 
-			expectedImage := common.NewSuzukiImageFromData(tc.width, tc.height, tc.expectedResultData)
+			expectedImage := common.NewSuzukiImageFromData(tc.width, tc.height, false, tc.expectedResultData)
 			if !resultImage.Equals(expectedImage) {
 				t.Errorf("result image differs from expected")
 			}
@@ -142,7 +142,7 @@ func createSuzukiImage(width int, height int, holes []image.Point) *common.Suzuk
 
 // createFullSuzukiImage creates a SuzukiImage where all pixels are populated (with 1).
 func createFullSuzukiImage(width int, height int) *common.SuzukiImage {
-	si := common.NewSuzukiImage(width, height)
+	si := common.NewSuzukiImage(width, height, false)
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
 			si.SetXY(x, y, 1)

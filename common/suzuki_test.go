@@ -8,7 +8,7 @@ import (
 
 func createSuzukiImage(t *testing.T, data []int) *SuzukiImage {
 
-	si := NewSuzukiImageFromData(5, 5, data)
+	si := NewSuzukiImageFromData(5, 5, false, data)
 	si.SetXY(0, 0, 1)
 	v := si.GetXY(0, 0)
 	if v != 1 {

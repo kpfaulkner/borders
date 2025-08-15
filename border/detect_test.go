@@ -47,7 +47,7 @@ func TestFindContour(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			incomingImage := common.NewSuzukiImageFromData(tc.width, tc.height, tc.imageData)
+			incomingImage := common.NewSuzukiImageFromData(tc.width, tc.height, false, tc.imageData)
 			cont, err := FindContours(incomingImage)
 			if tc.expectErr && err == nil {
 				t.Errorf("expected error, got nil")
@@ -99,7 +99,7 @@ func createSuzukiImage(width int, height int, holes []image.Point) *common.Suzuk
 
 // createFullSuzukiImage creates a SuzukiImage where all pixels are populated (with 1).
 func createFullSuzukiImage(width int, height int) *common.SuzukiImage {
-	si := common.NewSuzukiImage(width, height)
+	si := common.NewSuzukiImage(width, height, false)
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
 			si.SetXY(x, y, 1)
