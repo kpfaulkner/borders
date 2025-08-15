@@ -11,11 +11,11 @@ on:
 jobs:
 
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        go: [1.24, 1.24]
+        os: [ubuntu-latest]
+        go: [1.24]
     steps:
     - uses: actions/checkout@v2
 
@@ -32,24 +32,13 @@ jobs:
         go test -v -cover ./... -coverprofile coverage.out -coverpkg ./...
         go tool cover -func coverage.out -o coverage.out  # Replaces coverage.out with the analysis of coverage.out
 
-    - name: Go Coverage Badge
-      uses: tj-actions/coverage-badge-go@v1
-      if: ${{ runner.os == 'Linux' && matrix.go == '1.24' }} # Runs this on only one of the ci builds.
+    - name: Update coverage report
+      uses: ncruces/go-coverage-report@v0
       with:
-        green: 80
-        filename: coverage.out
-
-    - uses: stefanzweifel/git-auto-commit-action@v4
-      id: auto-commit-action
-      with:
-        commit_message: Apply Code Coverage Badge
-        skip_fetch: true
-        skip_checkout: true
-        file_pattern: ./README.md
-
-    - name: Push Changes
-      if: steps.auto-commit-action.outputs.changes_detected == 'true'
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ github.token }}
-        branch: ${{ github.ref }}
+        report: true
+        chart: true
+        amend: true
+      if: |
+        matrix.os == 'ubuntu-latest' &&
+        github.event_name == 'push'
+      continue-on-error: true
