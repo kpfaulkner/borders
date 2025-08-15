@@ -28,7 +28,7 @@ jobs:
       run: |
         #go test -v -cover $(go list -buildvcs=false ./... | grep -v examples ) -coverprofile coverage 
         #go tool cover -func coverage -o coverage  # Replaces coverage with the analysis of coverage
-        go test -coverprofile=coverage -coverpkg=./border,./common,./converters,./image ./...
+        go test -covermode=count -coverprofile=coverage ./border ./common ./converters ./image
 
     - name: Update coverage report
       uses: ncruces/go-coverage-report@v0
