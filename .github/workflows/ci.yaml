@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  INPUT_COVERAGE=coverage.out
+  INPUT_COVERAGE: "coverage.out"
 
 jobs:
 
