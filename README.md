@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/kpfaulkner/borders.svg)](https://pkg.go.dev/github.com/kpfaulkner/borders)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kpfaulkner/borders)](https://goreportcard.com/report/github.com/kpfaulkner/borders)
-
+[![Go Coverage](https://github.com/kpfaulkner/borders/wiki/coverage.svg)](https://raw.githack.com/wiki/kpfaulkner/borders/coverage.html)
 This is an implementation of the Suzuki + Abe "Topological Structural Analysis of Digitized Binary Images by Border Following"
 ( http://pdf.xuebalib.com:1262/xuebalib.com.17233.pdf )
 
