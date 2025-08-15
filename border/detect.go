@@ -161,7 +161,7 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 	contours := make(map[int]*Contour)
 	done := []bool{false, false, false, false, false, false, false, false}
 
-	contour := newContour(1)
+	contour := NewContour(1)
 	contours[lnbd] = contour
 
 	height := img.Height
@@ -176,7 +176,7 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 			if isOuter || isHole {
 
 				var contourPrime *Contour
-				contour := newContour(1)
+				contour := NewContour(1)
 				from := image.Point{j, i}
 				parentId := 0
 				if isOuter {

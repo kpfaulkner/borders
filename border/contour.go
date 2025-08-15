@@ -44,8 +44,8 @@ type Contour struct {
 	Usable bool
 }
 
-// newContour create new contour
-func newContour(id int) *Contour {
+// NewContour create new contour
+func NewContour(id int) *Contour {
 	c := Contour{}
 	c.Id = id
 	c.BorderType = Hole
