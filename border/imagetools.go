@@ -12,10 +12,17 @@ import (
 	image2 "github.com/kpfaulkner/borders/image"
 )
 
-// LoadImage loads a PNG and returns a SuzukiImage.
+// LoadImage loads a PNG and returns a SuzukiImage. Currently restricted to PNG but will eventually expand
+// to include other formats.
+//
 // Erode parameter forces the eroding of the image before converting to a SuzukiImage.
-// Dilate parameter forces the dilating of the image before converting to a SuzukiImage.
+// See https://en.wikipedia.org/wiki/Erosion_(morphology) for explanation
+//
+// Dilate parameter forces the dilating of the image before converting to a SuzukiImage. Likewise, see
+// https://en.wikipedia.org/wiki/Dilation_(morphology) for explanation.
+//
 // The combination of Erode and Dilate helps remove any "spikes" that may appear in the generated boundary.
+// erode and dilate will usually be 0 (none) or 1 (single pixel spikes)
 func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, error) {
 
 	f, err := os.Open(filename)
@@ -112,7 +119,8 @@ func doesImageRequirePadding(img image.Image) bool {
 	return false
 }
 
-// SaveImage saves a SuzukiImage to filename
+// SaveImage saves a SuzukiImage as a PNG to given filename.
+// Although currently only PNG, will make this more generic in the future.
 func SaveImage(filename string, si *common.SuzukiImage) error {
 
 	upLeft := image.Point{0, 0}
@@ -138,9 +146,13 @@ func SaveImage(filename string, si *common.SuzukiImage) error {
 
 // SaveContourSliceImage saves a contour (and all child contours) as a PNG.
 // Width and height are the dimensions of the image to save.
+//
 // flipBook is a bool to indicate that when each child contour is added to the image, the image should be
 // saved to a new file with the filename suffixed with the count of contours added so far. This is useful
 // for debugging and visualising the contours as they are added.
+//
+// minContourSize indicates if minimum number of points that make up a contour. If contour contains fewer, then
+// do NOT save.
 func SaveContourSliceImage(filename string, c *Contour, width int, height int, flipBook bool, minContourSize int) error {
 
 	upLeft := image.Point{0, 0}

@@ -151,7 +151,7 @@ func addCollisionFlag(contour *Contour, parentId int, contours map[int]*Contour,
 	}
 }
 
-// FindContours takes a SuzukiImage (basic 2d slice) and determines the Contours that are present.
+// FindContours takes a SuzukiImage and determines the Contours that are present.
 // It returns the single parent contour which in turn has all other contours as children or further
 // generations.
 func FindContours(img *common.SuzukiImage) (*Contour, error) {
@@ -161,7 +161,7 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 	contours := make(map[int]*Contour)
 	done := []bool{false, false, false, false, false, false, false, false}
 
-	contour := NewContour(1)
+	contour := newContour(1)
 	contours[lnbd] = contour
 
 	height := img.Height
@@ -176,7 +176,7 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 			if isOuter || isHole {
 
 				var contourPrime *Contour
-				contour := NewContour(1)
+				contour := newContour(1)
 				from := image.Point{j, i}
 				parentId := 0
 				if isOuter {
@@ -237,6 +237,7 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 	}
 
 	finalContour := contours[1]
+
 	// image was padded... so now shift every co-ord by -1,-1
 	if img.HasPadding() {
 		shiftContour(finalContour)
