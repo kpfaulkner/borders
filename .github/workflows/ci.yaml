@@ -26,8 +26,9 @@ jobs:
 
     - name: Test
       run: |
-        go test -v -cover $(go list -buildvcs=false ./... | grep -v examples | grep -v "borders/border") -coverprofile coverage 
-        go tool cover -func coverage -o coverage  # Replaces coverage with the analysis of coverage
+        #go test -v -cover $(go list -buildvcs=false ./... | grep -v examples ) -coverprofile coverage 
+        #go tool cover -func coverage -o coverage  # Replaces coverage with the analysis of coverage
+        go test ./... -coverpkg "$(go list ./... | grep -v example)/... " -coverprofile coverage
 
     - name: Update coverage report
       uses: ncruces/go-coverage-report@v0
