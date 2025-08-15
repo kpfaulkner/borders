@@ -37,6 +37,8 @@ jobs:
 
     - name: Update coverage report
       uses: ncruces/go-coverage-report@v0
+      env:
+        INPUT_COVERAGE: "coverage.out"
       with:
         report: true
         chart: true
