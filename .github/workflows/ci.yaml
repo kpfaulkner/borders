@@ -26,8 +26,8 @@ jobs:
 
     - name: Test
       run: |
-        go test -v -cover $(go list -buildvcs=false ./... | grep -v examples) -coverprofile coverage.out -coverpkg $(go list -buildvcs=false ./... | grep -v examples)
-        go tool cover -func coverage.out -o coverage.out  # Replaces coverage.out with the analysis of coverage.out
+        go test -v -cover $(go list -buildvcs=false ./... | grep -v examples) -coverprofile coverage -coverpkg $(go list -buildvcs=false ./... | grep -v examples)
+        go tool cover -func coverage -o coverage  # Replaces coverage.out with the analysis of coverage.out
 
     - name: Update coverage report
       uses: ncruces/go-coverage-report@v0
@@ -35,7 +35,7 @@ jobs:
         report: true
         chart: true
         amend: true
-        coverage-file: coverage.out
+        coverage-file: coverage
       if: |
         matrix.os == 'ubuntu-latest' &&
         github.event_name == 'push'
