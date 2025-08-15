@@ -26,8 +26,8 @@ jobs:
 
     - name: Test
       run: |
-        go test -v -cover $(go list -buildvcs=false ./... | grep -v examples) -coverprofile coverage -coverpkg $(go list -buildvcs=false ./... | grep -v examples)
-        go tool cover -func coverage -o coverage  # Replaces coverage.out with the analysis of coverage.out
+        go test -v -cover $(go list -buildvcs=false ./... | grep -v examples) -coverprofile coverage 
+        go tool cover -func coverage -o coverage  # Replaces coverage with the analysis of coverage
 
     - name: Update coverage report
       uses: ncruces/go-coverage-report@v0
