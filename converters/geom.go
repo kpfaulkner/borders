@@ -12,6 +12,14 @@ import (
 const (
 	EarthRadius       = 6378137.0
 	toleranceInMetres = 2
+
+	radiansToDegreesRatio = math.Pi / 180.0
+	degreesToRadiansRatio = 180.0 / math.Pi
+
+	minLatitude  = -85.05112878
+	maxLatitude  = 85.05112878
+	minLongitude = -180
+	maxLongitude = 180
 )
 
 type PointConverter func(x float64, y float64) (float64, float64)
@@ -35,7 +43,6 @@ func LatLongToSlippy(latDegrees float64, longDegrees float64, scale int) (float6
 	}
 	y := int(math.Floor((1.0 - math.Log(math.Tan(latDegrees*math.Pi/180.0)+1.0/math.Cos(latDegrees*math.Pi/180.0))/math.Pi) / 2.0 * n))
 	return float64(x), float64(y)
-
 }
 
 // ConvertContourToPolygon converts the contours (set of x/y coords) to geometries commonly used in the GIS space
@@ -253,4 +260,59 @@ func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*ge
 	}
 
 	return nil, errors.New("no multipolygon found in geometry collection")
+}
+
+// NewPixelToLatLongConverter returns a function that converts pixel coordinates to lat/long.
+// Process is:
+//
+// 1) get X,Y coordinates for the topleft pixel
+// 2) For each x,y coords passed (which will be position within image), convert to global space (add globalX/globalY)
+// 3) Then run PixelXYToLatLong for each new globally positions pixel
+func NewPixelToLatLongConverter(topLeftPixelLong float64, topLeftPixelLat float64, scale int) func(X float64, Y float64) (float64, float64) {
+
+	// global pixel position of top left corner.
+	gX, gY := LatLongToPixelXY(float64(topLeftPixelLat), float64(topLeftPixelLong), scale)
+	globalX := float64(gX)
+	globalY := float64(gY)
+	f := func(x float64, y float64) (float64, float64) {
+		newX := x + globalX
+		newY := y + globalY
+		lat, lon := PixelXYToLatLong(uint64(newX), uint64(newY), scale)
+		return lon, lat
+	}
+	return f
+}
+
+func PixelXYToLatLong(pixelX uint64, pixelY uint64, scale int) (float64, float64) {
+
+	// temp hack.. still trying to remember why
+	//pixelX += 16
+	//pixelY -= 1
+
+	pixelTileSize := 256.0
+	pixelGlobeSize := pixelTileSize * math.Pow(2, float64(scale))
+	xPixelsToDegreesRatio := pixelGlobeSize / 360.0
+	yPixelsToRadiansRatio := pixelGlobeSize / (2.0 * math.Pi)
+	halfPixelGlobeSize := pixelGlobeSize / 2.0
+
+	longitude := (float64(pixelX) - halfPixelGlobeSize) / xPixelsToDegreesRatio
+	latitude := (2*math.Atan(math.Exp((float64(pixelY)-halfPixelGlobeSize)/(-yPixelsToRadiansRatio))) -
+		math.Pi/2.0) * degreesToRadiansRatio
+
+	return latitude, longitude
+}
+
+func LatLongToPixelXY(latitude float64, longitude float64, scale int) (uint64, uint64) {
+
+	pixelTileSize := 256.0
+	pixelGlobeSize := pixelTileSize * math.Pow(2, float64(scale))
+	xPixelsToDegreesRatio := pixelGlobeSize / 360.0
+	yPixelsToRadiansRatio := pixelGlobeSize / (2.0 * math.Pi)
+	halfPixelGlobeSize := pixelGlobeSize / 2.0
+
+	x := math.Round(halfPixelGlobeSize + (longitude * xPixelsToDegreesRatio))
+	f := math.Min(math.Max(math.Sin(latitude*radiansToDegreesRatio), -0.9999), 0.9999)
+	y := math.Round(halfPixelGlobeSize + 0.5*math.Log((1+f)/(1-f))*(-yPixelsToRadiansRatio))
+	return uint64(x), uint64(y)
+
 }

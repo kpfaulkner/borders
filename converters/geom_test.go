@@ -1,6 +1,7 @@
 package converters
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -146,4 +147,10 @@ func TestLatLongToSlippy(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPixelXYToLatLong(t *testing.T) {
+
+	lat, lon := PixelXYToLatLong(16123926*2, 199596287*2, 22)
+	fmt.Printf("lat %f, lon %f\n", lat, lon)
 }
