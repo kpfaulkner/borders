@@ -14,6 +14,100 @@ var (
 	dirDelta = []image.Point{{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}}
 )
 
+// FindContours takes a SuzukiImage and determines the Contours that are present.
+// It returns the single parent contour which in turn has all other contours as children or further
+// generations.
+func FindContours(img *common.SuzukiImage) (*Contour, error) {
+	nbd := 1
+	lnbd := 1
+
+	contours := make(map[int]*Contour)
+	done := []bool{false, false, false, false, false, false, false, false}
+
+	contour := NewContour(1)
+	contours[lnbd] = contour
+
+	height := img.Height
+	width := img.Width
+
+	for i := 0; i < height; i++ {
+		lnbd = 1
+		for j := 0; j < width; j++ {
+			fji := img.GetXY(j, i)
+			isOuter := fji == 1 && (j == 0 || img.GetXY(j-1, i) == 0)
+			isHole := fji >= 1 && (j == width-1 || img.GetXY(j+1, i) == 0)
+			if isOuter || isHole {
+
+				var contourPrime *Contour
+				contour := NewContour(1)
+				from := image.Point{j, i}
+				parentId := 0
+				if isOuter {
+					nbd += 1
+					from = from.Sub(image.Point{1, 0})
+					contour.BorderType = Outer
+					contourPrime = contours[lnbd]
+					if contourPrime.BorderType == Outer {
+						parentId = contourPrime.ParentId
+					} else {
+						parentId = contourPrime.Id
+					}
+				} else {
+					nbd += 1
+					if fji > 1 {
+						lnbd = fji
+					}
+					contourPrime = contours[lnbd]
+					from = from.Add(image.Point{1, 0})
+					contour.BorderType = Hole
+					if contourPrime.BorderType == Outer {
+						parentId = contourPrime.Id
+					} else {
+						parentId = contourPrime.ParentId
+					}
+				}
+
+				p0 := image.Point{j, i}
+				border, collectionIndices, err := createBorder(img, p0, from, nbd, done)
+				if err != nil {
+					log.Errorf("unable to create border: %s", err.Error())
+					return nil, err
+				}
+
+				if len(border) == 0 {
+					border = append(border, p0)
+					img.Set(p0, -1*nbd)
+				}
+
+				if parentId != 0 {
+					parent := contours[parentId]
+					parent.Children = append(parent.Children, contour)
+					contour.Parent = contours[parentId]
+				}
+				contour.ParentId = parentId
+				contour.Points = border
+				contour.Id = nbd
+				contours[nbd] = contour
+				addCollisionFlag(contour, parentId, contours, collectionIndices)
+			}
+			if fji != 0 && fji != 1 {
+				lnbd = fji
+				if lnbd < 0 {
+					lnbd *= -1
+				}
+			}
+		}
+	}
+
+	finalContour := contours[1]
+
+	// image was padded... so now shift every co-ord by -1,-1
+	if img.HasPadding() {
+		shiftContour(finalContour)
+	}
+	return finalContour, nil
+}
+
 // clockwise determines direction if we have 'dir' and turn clockwise
 func clockwise(dir int) int {
 	return (dir + 1) % 8
@@ -149,100 +243,6 @@ func addCollisionFlag(contour *Contour, parentId int, contours map[int]*Contour,
 			}
 		}
 	}
-}
-
-// FindContours takes a SuzukiImage and determines the Contours that are present.
-// It returns the single parent contour which in turn has all other contours as children or further
-// generations.
-func FindContours(img *common.SuzukiImage) (*Contour, error) {
-	nbd := 1
-	lnbd := 1
-
-	contours := make(map[int]*Contour)
-	done := []bool{false, false, false, false, false, false, false, false}
-
-	contour := NewContour(1)
-	contours[lnbd] = contour
-
-	height := img.Height
-	width := img.Width
-
-	for i := 0; i < height; i++ {
-		lnbd = 1
-		for j := 0; j < width; j++ {
-			fji := img.GetXY(j, i)
-			isOuter := fji == 1 && (j == 0 || img.GetXY(j-1, i) == 0)
-			isHole := fji >= 1 && (j == width-1 || img.GetXY(j+1, i) == 0)
-			if isOuter || isHole {
-
-				var contourPrime *Contour
-				contour := NewContour(1)
-				from := image.Point{j, i}
-				parentId := 0
-				if isOuter {
-					nbd += 1
-					from = from.Sub(image.Point{1, 0})
-					contour.BorderType = Outer
-					contourPrime = contours[lnbd]
-					if contourPrime.BorderType == Outer {
-						parentId = contourPrime.ParentId
-					} else {
-						parentId = contourPrime.Id
-					}
-				} else {
-					nbd += 1
-					if fji > 1 {
-						lnbd = fji
-					}
-					contourPrime = contours[lnbd]
-					from = from.Add(image.Point{1, 0})
-					contour.BorderType = Hole
-					if contourPrime.BorderType == Outer {
-						parentId = contourPrime.Id
-					} else {
-						parentId = contourPrime.ParentId
-					}
-				}
-
-				p0 := image.Point{j, i}
-				border, collectionIndices, err := createBorder(img, p0, from, nbd, done)
-				if err != nil {
-					log.Errorf("unable to create border: %s", err.Error())
-					return nil, err
-				}
-
-				if len(border) == 0 {
-					border = append(border, p0)
-					img.Set(p0, -1*nbd)
-				}
-
-				if parentId != 0 {
-					parent := contours[parentId]
-					parent.Children = append(parent.Children, contour)
-					contour.Parent = contours[parentId]
-				}
-				contour.ParentId = parentId
-				contour.Points = border
-				contour.Id = nbd
-				contours[nbd] = contour
-				addCollisionFlag(contour, parentId, contours, collectionIndices)
-			}
-			if fji != 0 && fji != 1 {
-				lnbd = fji
-				if lnbd < 0 {
-					lnbd *= -1
-				}
-			}
-		}
-	}
-
-	finalContour := contours[1]
-
-	// image was padded... so now shift every co-ord by -1,-1
-	if img.HasPadding() {
-		shiftContour(finalContour)
-	}
-	return finalContour, nil
 }
 
 func shiftContour(contour *Contour) {
