@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	scale := 19
+	scale := 21
 
 	// each pixel of this is a slippy coord
 	img, err := border.LoadImage("../../testimages/testmap2-1891519-1285047-21.png", 1, 1)
