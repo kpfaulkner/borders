@@ -15,11 +15,6 @@ const (
 
 	radiansToDegreesRatio = math.Pi / 180.0
 	degreesToRadiansRatio = 180.0 / math.Pi
-
-	minLatitude  = -85.05112878
-	maxLatitude  = 85.05112878
-	minLongitude = -180
-	maxLongitude = 180
 )
 
 type PointConverter func(x float64, y float64) (float64, float64)
@@ -284,10 +279,6 @@ func NewPixelToLatLongConverter(topLeftPixelLong float64, topLeftPixelLat float6
 }
 
 func PixelXYToLatLong(pixelX uint64, pixelY uint64, scale int) (float64, float64) {
-
-	// temp hack.. still trying to remember why
-	//pixelX += 16
-	//pixelY -= 1
 
 	pixelTileSize := 256.0
 	pixelGlobeSize := pixelTileSize * math.Pow(2, float64(scale))
