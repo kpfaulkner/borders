@@ -124,7 +124,7 @@ func move(pixel image.Point, img *common.SuzukiImage, dir int) image.Point {
 	width := img.Width
 	height := img.Height
 
-	if (0 < newP.Y && newP.Y < height) && (0 < newP.X && newP.X < width) {
+	if (0 <= newP.Y && newP.Y < height) && (0 <= newP.X && newP.X < width) {
 		if img.Get(newP) != 0 {
 			return newP
 		}
