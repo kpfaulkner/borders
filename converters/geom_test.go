@@ -241,6 +241,44 @@ func TestLatLongToPixelXY_NegativeLongitudeProducesNegativeX(t *testing.T) {
 	}
 }
 
+// TestNewPixelToLatLongConverter verifies the (lat, lon, scale) parameter order
+// by passing (0, 0) — the image's top-left pixel — to the returned closure and
+// asserting it round-trips to the lat/lon the converter was constructed with.
+// A parameter-order swap would produce errors of tens of degrees and trip this
+// test loudly.
+func TestNewPixelToLatLongConverter(t *testing.T) {
+	// Loose enough to absorb pixel-quantisation round-trip error at scale 18
+	// (~5e-6 deg/pixel), tight enough that a lat/lon swap (~50+ deg) fails.
+	const tol = 1e-4
+
+	testCases := []struct {
+		name  string
+		lat   float64
+		lon   float64
+		scale int
+	}{
+		{name: "melbourne", lat: -37.5694910, lon: 144.7007660, scale: 21},
+		{name: "london", lat: 51.5074, lon: -0.1278, scale: 18},
+		{name: "southern hemisphere, negative longitude", lat: -10.0, lon: -75.0, scale: 20},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			conv := NewPixelToLatLongConverter(tc.lat, tc.lon, tc.scale)
+
+			// (0, 0) addresses the image's top-left pixel — the converter should
+			// return (lon, lat) matching what we constructed it with.
+			lon, lat := conv(0, 0)
+			if math.Abs(lon-tc.lon) > tol {
+				t.Errorf("top-left lon: expected %f, got %f", tc.lon, lon)
+			}
+			if math.Abs(lat-tc.lat) > tol {
+				t.Errorf("top-left lat: expected %f, got %f", tc.lat, lat)
+			}
+		})
+	}
+}
+
 // TestLatLongPixelRoundTrip asserts the two functions are near-inverses within
 // pixel-quantisation error.
 func TestLatLongPixelRoundTrip(t *testing.T) {

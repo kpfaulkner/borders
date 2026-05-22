@@ -30,7 +30,7 @@ func main() {
 	lat := -37.667085056
 
 	// Converter from pixels to lat/lon
-	conv := converters.NewPixelToLatLongConverter(lng, lat, scale)
+	conv := converters.NewPixelToLatLongConverter(lat, lng, scale)
 
 	// tolerance of 0 means get ConvertContourToPolygon to calculate it
 	poly, err := converters.ConvertContourToPolygon(cont, scale, false, 0, 0, true, conv)

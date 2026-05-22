@@ -229,24 +229,37 @@ func filterMultiPolygonFromGeometryCollection(col *geom.GeometryCollection) (*ge
 }
 
 // NewPixelToLatLongConverter returns a function that converts pixel coordinates to lat/long.
+// topLeftPixelLat/topLeftPixelLong are the geographic coordinates of the image's top-left pixel.
+// Important to note that the converter function returned when executed will return
+// (longitude,latitude) in that order.
 // Process is:
 //
 // 1) get X,Y coordinates for the topleft pixel
 // 2) For each x,y coords passed (which will be position within image), convert to global space (add globalX/globalY)
-// 3) Then run PixelXYToLatLong for each new globally positions pixel
-func NewPixelToLatLongConverter(topLeftPixelLong float64, topLeftPixelLat float64, scale int) func(X float64, Y float64) (float64, float64) {
+// 3) Convert each globally positioned pixel to lat/long using the precomputed scale-dependent constants.
+func NewPixelToLatLongConverter(topLeftPixelLat float64, topLeftPixelLong float64, scale int) func(X float64, Y float64) (float64, float64) {
+
+	// Scale-dependent constants — computed once here rather than per call.
+	// PixelXYToLatLong recomputes these every invocation; the closure below is
+	// called once per polygon vertex (often tens of thousands of times per
+	// conversion), so hoisting the math.Exp2 and three divisions matters.
+	pixelGlobeSize := 256.0 * math.Exp2(float64(scale))
+	halfPixelGlobeSize := pixelGlobeSize / 2.0
+	xPixelsToDegreesRatio := pixelGlobeSize / 360.0
+	yPixelsToRadiansRatio := pixelGlobeSize / (2.0 * math.Pi)
 
 	// global pixel position of top left corner.
-	gX, gY := LatLongToPixelXY(float64(topLeftPixelLat), float64(topLeftPixelLong), scale)
+	gX, gY := LatLongToPixelXY(topLeftPixelLat, topLeftPixelLong, scale)
 	globalX := float64(gX)
 	globalY := float64(gY)
-	f := func(x float64, y float64) (float64, float64) {
-		newX := x + globalX
-		newY := y + globalY
-		lat, lon := PixelXYToLatLong(int64(newX), int64(newY), scale)
-		return lon, lat
+
+	return func(x float64, y float64) (float64, float64) {
+		pixelX := x + globalX
+		pixelY := y + globalY
+		longitude := (pixelX - halfPixelGlobeSize) / xPixelsToDegreesRatio
+		latitude := (2*math.Atan(math.Exp((pixelY-halfPixelGlobeSize)/(-yPixelsToRadiansRatio))) - math.Pi/2.0) * radiansToDegreesRatio
+		return longitude, latitude
 	}
-	return f
 }
 
 func PixelXYToLatLong(pixelX int64, pixelY int64, scale int) (float64, float64) {
