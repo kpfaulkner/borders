@@ -139,9 +139,12 @@ func SaveImage(filename string, si *common.SuzukiImage) error {
 		}
 	}
 
-	f, _ := os.Create(filename)
-	png.Encode(f, img)
-	return nil
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return png.Encode(f, img)
 }
 
 // SaveContourSliceImage saves a contour (and all child contours) as a PNG.
@@ -170,10 +173,15 @@ func SaveContourSliceImage(filename string, c *Contour, width int, height int, f
 	colour := 0
 	count := 0
 
-	drawContour(img, c, flipBook, minContourSize, colour, &count, filename)
-	f, _ := os.Create(filename)
-	png.Encode(f, img)
-	return nil
+	if err := drawContour(img, c, flipBook, minContourSize, colour, &count, filename); err != nil {
+		return err
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return png.Encode(f, img)
 }
 
 // drawContour saves a contour to the provided image and then recursively calls to save children to same image.
@@ -209,9 +217,17 @@ func drawContour(img *image.RGBA, c *Contour, flipBook bool, minContourSize int,
 		// save new image per contour added...  crazy
 		if flipBook {
 			fn := fmt.Sprintf("%s-%d.png", filename, *count)
-			f, _ := os.Create(fn)
-			png.Encode(f, img)
-			f.Close()
+			f, err := os.Create(fn)
+			if err != nil {
+				return err
+			}
+			encErr := png.Encode(f, img)
+			if cErr := f.Close(); encErr == nil {
+				encErr = cErr
+			}
+			if encErr != nil {
+				return encErr
+			}
 		}
 		*count = *count + 1
 	}
@@ -222,7 +238,9 @@ func drawContour(img *image.RGBA, c *Contour, flipBook bool, minContourSize int,
 			colour = 0
 		}
 		*count = *count + 1
-		drawContour(img, child, flipBook, minContourSize, colour, count, filename)
+		if err := drawContour(img, child, flipBook, minContourSize, colour, count, filename); err != nil {
+			return err
+		}
 	}
 
 	return nil

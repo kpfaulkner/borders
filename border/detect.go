@@ -118,18 +118,17 @@ func counterClockwise(dir int) int {
 	return (dir + 7) % 8
 }
 
-// move moves the current point (pixel) in the direction 'dir'
-func move(pixel image.Point, img *common.SuzukiImage, dir int) image.Point {
+// move moves the current point (pixel) in the direction 'dir'.
+// Returns ok=false when the neighbour is out of bounds or background.
+func move(pixel image.Point, img *common.SuzukiImage, dir int) (image.Point, bool) {
 	newP := pixel.Add(dirDelta[dir])
-	width := img.Width
-	height := img.Height
-
-	if (0 <= newP.Y && newP.Y < height) && (0 <= newP.X && newP.X < width) {
-		if img.Get(newP) != 0 {
-			return newP
-		}
+	if newP.X < 0 || newP.X >= img.Width || newP.Y < 0 || newP.Y >= img.Height {
+		return image.Point{}, false
 	}
-	return image.Point{0, 0}
+	if img.Get(newP) == 0 {
+		return image.Point{}, false
+	}
+	return newP, true
 }
 
 // calcDir returns index of dirDelta that matches direction taken.
@@ -160,17 +159,18 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 	}
 
 	moved := clockwise(dir)
-	p1 := image.Point{0, 0}
+	var p1 image.Point
+	foundP1 := false
 	for moved != dir {
-		newP := move(p0, img, moved)
-		if newP.Y != 0 {
+		if newP, ok := move(p0, img, moved); ok {
 			p1 = newP
+			foundP1 = true
 			break
 		}
 		moved = clockwise(moved)
 	}
 
-	if p1.X == 0 && p1.Y == 0 {
+	if !foundP1 {
 		return []image.Point{}, collisionIndicies, nil
 	}
 	p2 = p1
@@ -183,11 +183,12 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 			return nil, nil, err
 		}
 		moved = counterClockwise(dir)
-		p4 := image.Point{0, 0}
+		var p4 image.Point
 		done = []bool{false, false, false, false, false, false, false, false}
 		for {
-			p4 = move(p3, img, moved)
-			if p4.Y != 0 {
+			var ok bool
+			p4, ok = move(p3, img, moved)
+			if ok {
 				break
 			}
 			done[moved] = true

@@ -13,8 +13,8 @@ const (
 	EarthRadius       = 6378137.0
 	toleranceInMetres = 2
 
-	radiansToDegreesRatio = math.Pi / 180.0
-	degreesToRadiansRatio = 180.0 / math.Pi
+	degreesToRadiansRatio = math.Pi / 180.0
+	radiansToDegreesRatio = 180.0 / math.Pi
 )
 
 type PointConverter func(x float64, y float64) (float64, float64)
@@ -288,7 +288,7 @@ func PixelXYToLatLong(pixelX uint64, pixelY uint64, scale int) (float64, float64
 
 	longitude := (float64(pixelX) - halfPixelGlobeSize) / xPixelsToDegreesRatio
 	latitude := (2*math.Atan(math.Exp((float64(pixelY)-halfPixelGlobeSize)/(-yPixelsToRadiansRatio))) -
-		math.Pi/2.0) * degreesToRadiansRatio
+		math.Pi/2.0) * radiansToDegreesRatio
 
 	return latitude, longitude
 }
@@ -302,7 +302,7 @@ func LatLongToPixelXY(latitude float64, longitude float64, scale int) (uint64, u
 	halfPixelGlobeSize := pixelGlobeSize / 2.0
 
 	x := math.Round(halfPixelGlobeSize + (longitude * xPixelsToDegreesRatio))
-	f := math.Min(math.Max(math.Sin(latitude*radiansToDegreesRatio), -0.9999), 0.9999)
+	f := math.Min(math.Max(math.Sin(latitude*degreesToRadiansRatio), -0.9999), 0.9999)
 	y := math.Round(halfPixelGlobeSize + 0.5*math.Log((1+f)/(1-f))*(-yPixelsToRadiansRatio))
 	return uint64(x), uint64(y)
 

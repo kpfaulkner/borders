@@ -7,10 +7,15 @@ import (
 )
 
 // SuzukiImage is the basic structure we use to define an image when trying to find contours.
+//
+// Storage is int32 per cell: each cell holds either 0/1 (background/foreground)
+// or a signed contour id assigned during border following. Contour ids are
+// bounded by the pixel count, so int32 is sufficient for any image up to ~2^31
+// pixels and halves memory vs. int on 64-bit platforms.
 type SuzukiImage struct {
 	Width   int
 	Height  int
-	data    []int
+	data    []int32
 	dataLen int
 
 	// Indicates if a 1 pixel padding has been applied to around the image.
@@ -27,7 +32,7 @@ func NewSuzukiImage(width int, height int, hasPadding bool) *SuzukiImage {
 	}
 	si.Width = width + padding
 	si.Height = height + padding
-	si.data = make([]int, si.Width*si.Height)
+	si.data = make([]int32, si.Width*si.Height)
 	si.dataLen = si.Width * si.Height // just saves us calculating a lot
 	si.hasPadding = hasPadding
 	return &si
@@ -41,41 +46,45 @@ func NewSuzukiImageFromData(width int, height int, hasPadding bool, data []int) 
 		for y := 0; y < height; y++ {
 			dst := (y+1)*si.Width + 1
 			src := y * width
-			copy(si.data[dst:dst+width], data[src:src+width])
+			for i := 0; i < width; i++ {
+				si.data[dst+i] = int32(data[src+i])
+			}
 		}
 	} else {
-		copy(si.data, data)
+		for i, v := range data {
+			si.data[i] = int32(v)
+		}
 	}
 	return si
 }
 
-// Get returns the value of a given point
+// GetAllData returns a copy of the underlying data as []int.
 func (si *SuzukiImage) GetAllData() []int {
-	return si.data
+	out := make([]int, len(si.data))
+	for i, v := range si.data {
+		out[i] = int(v)
+	}
+	return out
 }
 
 // Get returns the value of a given point
 func (si *SuzukiImage) Get(p image.Point) int {
-	idx := p.Y*si.Width + p.X
-	return si.data[idx]
+	return int(si.data[p.Y*si.Width+p.X])
 }
 
 // GetXY returns the value of a given x/y
 func (si *SuzukiImage) GetXY(x int, y int) int {
-	idx := y*si.Width + x
-	return si.data[idx]
+	return int(si.data[y*si.Width+x])
 }
 
 // Set sets the value at a given point
 func (si *SuzukiImage) Set(p image.Point, val int) {
-	idx := p.Y*si.Width + p.X
-	si.data[idx] = val
+	si.data[p.Y*si.Width+p.X] = int32(val)
 }
 
 // SetXY sets the value at a given x/y
 func (si *SuzukiImage) SetXY(x int, y int, val int) {
-	idx := y*si.Width + x
-	si.data[idx] = val
+	si.data[y*si.Width+x] = int32(val)
 }
 
 func (si *SuzukiImage) HasPadding() bool {
