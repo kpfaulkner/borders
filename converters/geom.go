@@ -74,49 +74,31 @@ func ConvertContourToPolygon(c *border.Contour, scale int, simplify bool, minPoi
 		if multiPolygonOnly {
 			if simplifiedGeom.Type() == geom.TypeMultiPolygon {
 				mp, _ = simplifiedGeom.AsMultiPolygon()
-				return returnConvertedGeometry(&mp, pointConverters...)
+				return returnConvertedGeometry(&mp, pointConverters...), nil
 			}
-
-			////////////////////////
-			// Need to check if this is still possible.
-			// need to check when we get geometrycollection vs multipolygon
-			//if simplifiedGeom.Type() == geom.TypeGeometryCollection {
-			//	gc, ok := simplifiedGeom.AsGeometryCollection()
-			//	if ok {
-			//		mp, err := filterMultiPolygonFromGeometryCollection(&gc)
-			//		if err == nil {
-			//			return returnConvertedGeometry(mp, pointConverters...)
-			//		}
-			//	}
-			//}
-			////////////////////////
 			return nil, errors.New("unable to filter multipolygon from geometry collection")
 		}
 
 		mp, ok := simplifiedGeom.AsMultiPolygon()
 		if ok {
-			return returnConvertedGeometry(&mp, pointConverters...)
+			return returnConvertedGeometry(&mp, pointConverters...), nil
 		} else {
 			return nil, errors.New("unable to convert simplified geom to multipolygon")
 		}
 	}
-	return returnConvertedGeometry(&mp, pointConverters...)
+	return returnConvertedGeometry(&mp, pointConverters...), nil
 }
 
 // returnConvertedGeometry converts the multipolygon with PointConverters (if supplied)
 // Can be used to help convert to lat/long or any other co-ordinate system.
-func returnConvertedGeometry(mp *geom.MultiPolygon, pointConverters ...PointConverter) (*geom.Geometry, error) {
-	finalMultiPoly, err := convertCoords(mp, pointConverters...)
-	if err != nil {
-		return nil, err
-	}
+func returnConvertedGeometry(mp *geom.MultiPolygon, pointConverters ...PointConverter) *geom.Geometry {
+	finalMultiPoly := convertCoords(mp, pointConverters...)
 	g := finalMultiPoly.AsGeometry()
-	return &g, nil
+	return &g
 }
 
 // convertCoords converts the coordinates of a multipolygon using the supplied PointConverters.
-func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) (*geom.MultiPolygon, error) {
-
+func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) *geom.MultiPolygon {
 	mp2 := mp.TransformXY(func(xy geom.XY) geom.XY {
 		x := xy.X
 		y := xy.Y
@@ -128,9 +110,7 @@ func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) (*geom.M
 		}
 		return geom.XY{X: x, Y: y}
 	})
-
-	return &mp2, nil
-
+	return &mp2
 }
 
 // generateLineString generates a LineString from a slice of image.Points.
@@ -139,23 +119,17 @@ func generateLineString(points []image.Point) (*geom.LineString, error) {
 
 	if seq.Length() > 2 {
 		ls := geom.NewLineString(seq)
-
-		// if linestring only has 1 value, then ditch.
-		if seq.Length() >= 1 {
-			return &ls, nil
-		}
+		return &ls, nil
 	}
 
 	return &geom.LineString{}, nil
 }
 
 // convertContourToPolygons converts the contour to a set of polygons but does NOT convert to different co-ord systems.
-// If a polygon has fewer than minPoints then it will be discarded. 0 means no min points.
+// A polygon is discarded when its outer ring has fewer than minPoints vertices. minPoints == 0 disables the filter.
+// Contours with an empty outer ring are always skipped, and empty hole rings are dropped so they don't poison the polygon.
 func convertContourToPolygons(c *border.Contour, minPoints int, polygons *[]geom.Polygon) error {
-
-	// outer... so make a poly
-	// will also cover hole if there.
-	if c.BorderType == border.Outer {
+	if c.BorderType == border.Outer && len(c.Points) > 0 && (minPoints == 0 || len(c.Points) >= minPoints) {
 
 		lineStrings := []geom.LineString{}
 		outerLS, err := generateLineString(c.Points)
@@ -164,9 +138,9 @@ func convertContourToPolygons(c *border.Contour, minPoints int, polygons *[]geom
 		}
 		lineStrings = append(lineStrings, *outerLS)
 
-		// now get children... (holes).
+		// holes — skip any with no points, which would otherwise be appended as an empty LineString.
 		for _, child := range c.Children {
-			if !child.ParentCollision && child.Usable {
+			if !child.ParentCollision && child.Usable && len(child.Points) > 0 {
 				ls, err := generateLineString(child.Points)
 				if err != nil {
 					return err
@@ -175,11 +149,8 @@ func convertContourToPolygons(c *border.Contour, minPoints int, polygons *[]geom
 			}
 		}
 
-		var poly geom.Polygon
-		if minPoints == 0 || len(lineStrings) > minPoints {
-			poly = geom.NewPolygon(lineStrings)
-			*polygons = append(*polygons, poly)
-		}
+		poly := geom.NewPolygon(lineStrings)
+		*polygons = append(*polygons, poly)
 	}
 
 	for _, child := range c.Children {
@@ -272,13 +243,13 @@ func NewPixelToLatLongConverter(topLeftPixelLong float64, topLeftPixelLat float6
 	f := func(x float64, y float64) (float64, float64) {
 		newX := x + globalX
 		newY := y + globalY
-		lat, lon := PixelXYToLatLong(uint64(newX), uint64(newY), scale)
+		lat, lon := PixelXYToLatLong(int64(newX), int64(newY), scale)
 		return lon, lat
 	}
 	return f
 }
 
-func PixelXYToLatLong(pixelX uint64, pixelY uint64, scale int) (float64, float64) {
+func PixelXYToLatLong(pixelX int64, pixelY int64, scale int) (float64, float64) {
 
 	pixelTileSize := 256.0
 	pixelGlobeSize := pixelTileSize * math.Pow(2, float64(scale))
@@ -293,7 +264,7 @@ func PixelXYToLatLong(pixelX uint64, pixelY uint64, scale int) (float64, float64
 	return latitude, longitude
 }
 
-func LatLongToPixelXY(latitude float64, longitude float64, scale int) (uint64, uint64) {
+func LatLongToPixelXY(latitude float64, longitude float64, scale int) (int64, int64) {
 
 	pixelTileSize := 256.0
 	pixelGlobeSize := pixelTileSize * math.Pow(2, float64(scale))
@@ -304,6 +275,6 @@ func LatLongToPixelXY(latitude float64, longitude float64, scale int) (uint64, u
 	x := math.Round(halfPixelGlobeSize + (longitude * xPixelsToDegreesRatio))
 	f := math.Min(math.Max(math.Sin(latitude*degreesToRadiansRatio), -0.9999), 0.9999)
 	y := math.Round(halfPixelGlobeSize + 0.5*math.Log((1+f)/(1-f))*(-yPixelsToRadiansRatio))
-	return uint64(x), uint64(y)
+	return int64(x), int64(y)
 
 }

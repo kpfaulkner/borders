@@ -1,7 +1,6 @@
 package converters
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
@@ -150,7 +149,124 @@ func TestLatLongToSlippy(t *testing.T) {
 }
 
 func TestPixelXYToLatLong(t *testing.T) {
+	const tol = 1e-9
 
-	lat, lon := PixelXYToLatLong(16123926*2, 199596287*2, 22)
-	fmt.Printf("lat %f, lon %f\n", lat, lon)
+	testCases := []struct {
+		name        string
+		pixelX      int64
+		pixelY      int64
+		scale       int
+		expectedLat float64
+		expectedLon float64
+	}{
+		{
+			name:        "tile center at scale 0 maps to origin",
+			pixelX:      128, // 256/2
+			pixelY:      128,
+			scale:       0,
+			expectedLat: 0,
+			expectedLon: 0,
+		},
+		{
+			name:        "globe center at scale 21 maps to origin",
+			pixelX:      268435456, // 256 * 2^21 / 2
+			pixelY:      268435456,
+			scale:       21,
+			expectedLat: 0,
+			expectedLon: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			lat, lon := PixelXYToLatLong(tc.pixelX, tc.pixelY, tc.scale)
+			if math.Abs(lat-tc.expectedLat) > tol {
+				t.Errorf("expected lat %f, got %f", tc.expectedLat, lat)
+			}
+			if math.Abs(lon-tc.expectedLon) > tol {
+				t.Errorf("expected lon %f, got %f", tc.expectedLon, lon)
+			}
+		})
+	}
+}
+
+func TestLatLongToPixelXY(t *testing.T) {
+	testCases := []struct {
+		name      string
+		lat       float64
+		lon       float64
+		scale     int
+		expectedX int64
+		expectedY int64
+	}{
+		{
+			name:      "origin at scale 0 is tile center",
+			lat:       0,
+			lon:       0,
+			scale:     0,
+			expectedX: 128, // 256/2
+			expectedY: 128,
+		},
+		{
+			name:      "origin at scale 21 is globe center",
+			lat:       0,
+			lon:       0,
+			scale:     21,
+			expectedX: 268435456, // 256 * 2^21 / 2
+			expectedY: 268435456,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			x, y := LatLongToPixelXY(tc.lat, tc.lon, tc.scale)
+			if x != tc.expectedX {
+				t.Errorf("expected x %d, got %d", tc.expectedX, x)
+			}
+			if y != tc.expectedY {
+				t.Errorf("expected y %d, got %d", tc.expectedY, y)
+			}
+		})
+	}
+}
+
+// TestLatLongToPixelXY_NegativeLongitudeProducesNegativeX is a regression test
+// for the uint64→int64 return type change. Previously a longitude < -180 (or
+// any value driving x below 0) would silently wrap to a huge positive uint64.
+// With int64 the result must remain negative so callers can detect/clamp.
+func TestLatLongToPixelXY_NegativeLongitudeProducesNegativeX(t *testing.T) {
+	x, _ := LatLongToPixelXY(0, -181, 10)
+	if x >= 0 {
+		t.Errorf("expected negative x for out-of-range longitude, got %d", x)
+	}
+}
+
+// TestLatLongPixelRoundTrip asserts the two functions are near-inverses within
+// pixel-quantisation error.
+func TestLatLongPixelRoundTrip(t *testing.T) {
+	const tol = 1e-3 // degrees; pixel quantisation is much coarser than this at low zooms
+
+	testCases := []struct {
+		name  string
+		lat   float64
+		lon   float64
+		scale int
+	}{
+		{name: "melbourne", lat: -37.5694910, lon: 144.7007660, scale: 21},
+		{name: "london", lat: 51.5074, lon: -0.1278, scale: 18},
+		{name: "southern hemisphere, negative longitude", lat: -10.0, lon: -75.0, scale: 15},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			x, y := LatLongToPixelXY(tc.lat, tc.lon, tc.scale)
+			lat, lon := PixelXYToLatLong(x, y, tc.scale)
+			if math.Abs(lat-tc.lat) > tol {
+				t.Errorf("lat round-trip: expected %f, got %f", tc.lat, lat)
+			}
+			if math.Abs(lon-tc.lon) > tol {
+				t.Errorf("lon round-trip: expected %f, got %f", tc.lon, lon)
+			}
+		})
+	}
 }
