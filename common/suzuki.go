@@ -35,8 +35,17 @@ func NewSuzukiImage(width int, height int, hasPadding bool) *SuzukiImage {
 
 func NewSuzukiImageFromData(width int, height int, hasPadding bool, data []int) *SuzukiImage {
 	si := NewSuzukiImage(width, height, hasPadding)
-	si.data = data[:]
-	si.dataLen = len(data)
+	if hasPadding {
+		// Copy each row of the unpadded source into the interior of the padded
+		// buffer, leaving the 1-pixel zero border intact.
+		for y := 0; y < height; y++ {
+			dst := (y+1)*si.Width + 1
+			src := y * width
+			copy(si.data[dst:dst+width], data[src:src+width])
+		}
+	} else {
+		copy(si.data, data)
+	}
 	return si
 }
 
