@@ -36,30 +36,31 @@ func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, err
 		return nil, err
 	}
 
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	isForeground := newForegroundTester(img)
+
 	// If any pixels on the edges are populated, then we need to pad this out by 1 pixel on each side.
 	// This will be reversed later.
-	requirePadding := doesImageRequirePadding(img)
+	requirePadding := edgeHasForeground(width, height, isForeground)
 
 	// need border to be black. Pad edges with 1 black pixel
-	si := common.NewSuzukiImage(img.Bounds().Dx(), img.Bounds().Dy(), requirePadding)
+	si := common.NewSuzukiImage(width, height, requirePadding)
 
 	paddingOffset := 0
 	if requirePadding {
 		paddingOffset = 1
 	}
 
-	// dumb... but convert to own image format for now.
-	for y := 0; y < img.Bounds().Dy(); y++ {
-		for x := 0; x < img.Bounds().Dx(); x++ {
-			cc := 0
-			c := img.At(x, y)
-			r, g, b, _ := c.RGBA()
-			if !(r == 0 && g == 0 && b == 0) {
-				cc = 1
+	// Walk in image-local 0-based coords; isForeground handles concrete-type Pix access.
+	// Background pixels are skipped — the SuzukiImage backing slice is already zero.
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			if isForeground(x, y) {
+				si.SetXY(x+paddingOffset, y+paddingOffset, 1)
 			}
-			si.SetXY(x+paddingOffset, y+paddingOffset, cc)
 		}
-
 	}
 
 	if erode != 0 {
@@ -79,43 +80,74 @@ func LoadImage(filename string, erode int, dilate int) (*common.SuzukiImage, err
 	return si, nil
 }
 
-// check down each edge to see if populated, if so, it will require padding
-func doesImageRequirePadding(img image.Image) bool {
-
-	// down left/right edge
-	for y := 0; y < img.Bounds().Dy(); y++ {
-		leftEdgeX := 0
-		c := img.At(leftEdgeX, y)
-		r, g, b, _ := c.RGBA()
-		if !(r == 0 && g == 0 && b == 0) {
-			return true
+// newForegroundTester returns a closure that reports whether the pixel at the
+// given image-local 0-based coordinate is foreground (non-black).
+//
+// The slow generic path uses image.Image.At(x, y).RGBA() per pixel — interface
+// dispatch on every call plus, for some image types, a per-call color allocation.
+// Direct .Pix access for the concrete types image/png actually returns is
+// roughly an order of magnitude faster on large images.
+//
+// Semantics match the original At/RGBA path: a pixel is foreground iff its
+// alpha-premultiplied RGB is non-zero. Fully transparent pixels are background
+// regardless of their underlying RGB.
+func newForegroundTester(img image.Image) func(x, y int) bool {
+	switch im := img.(type) {
+	case *image.NRGBA:
+		pix, stride := im.Pix, im.Stride
+		return func(x, y int) bool {
+			off := y*stride + x*4
+			// Non-premultiplied: also require non-zero alpha so transparent pixels are background.
+			return pix[off+3] != 0 && (pix[off] != 0 || pix[off+1] != 0 || pix[off+2] != 0)
 		}
+	case *image.RGBA:
+		pix, stride := im.Pix, im.Stride
+		return func(x, y int) bool {
+			off := y*stride + x*4
+			// Premultiplied — non-zero RGB already implies non-zero alpha.
+			return pix[off] != 0 || pix[off+1] != 0 || pix[off+2] != 0
+		}
+	case *image.Gray:
+		pix, stride := im.Pix, im.Stride
+		return func(x, y int) bool {
+			return pix[y*stride+x] != 0
+		}
+	case *image.Paletted:
+		// Resolve each palette entry once — the inner loop becomes a single byte lookup.
+		isFG := make([]bool, len(im.Palette))
+		for i, c := range im.Palette {
+			r, g, b, _ := c.RGBA()
+			isFG[i] = r != 0 || g != 0 || b != 0
+		}
+		pix, stride := im.Pix, im.Stride
+		return func(x, y int) bool {
+			return isFG[pix[y*stride+x]]
+		}
+	default:
+		// Fallback for any uncommon image type — matches the original semantics.
+		minX, minY := img.Bounds().Min.X, img.Bounds().Min.Y
+		return func(x, y int) bool {
+			r, g, b, _ := img.At(x+minX, y+minY).RGBA()
+			return r != 0 || g != 0 || b != 0
+		}
+	}
+}
 
-		rightEdgeX := img.Bounds().Dx() - 1
-		c = img.At(rightEdgeX, y)
-		r, g, b, _ = c.RGBA()
-		if !(r == 0 && g == 0 && b == 0) {
+// edgeHasForeground reports whether any pixel along the image's outer edge is
+// foreground. Used to decide whether to pad the SuzukiImage with a 1-pixel zero border.
+func edgeHasForeground(width, height int, isForeground func(x, y int) bool) bool {
+	// left and right columns
+	for y := 0; y < height; y++ {
+		if isForeground(0, y) || isForeground(width-1, y) {
 			return true
 		}
 	}
-
-	// across top and bottom
-	for x := 0; x < img.Bounds().Dx(); x++ {
-		topEdgeY := 0
-		c := img.At(x, topEdgeY)
-		r, g, b, _ := c.RGBA()
-		if !(r == 0 && g == 0 && b == 0) {
-			return true
-		}
-
-		bottomEdgeY := img.Bounds().Dy() - 1
-		c = img.At(x, bottomEdgeY)
-		r, g, b, _ = c.RGBA()
-		if !(r == 0 && g == 0 && b == 0) {
+	// top and bottom rows
+	for x := 0; x < width; x++ {
+		if isForeground(x, 0) || isForeground(x, height-1) {
 			return true
 		}
 	}
-
 	return false
 }
 
