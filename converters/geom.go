@@ -114,15 +114,15 @@ func convertCoords(mp *geom.MultiPolygon, converters ...PointConverter) *geom.Mu
 }
 
 // generateLineString generates a LineString from a slice of image.Points.
-func generateLineString(points []image.Point) (*geom.LineString, error) {
+func generateLineString(points []image.Point) *geom.LineString {
 	seq := pointsToSequence(points)
 
 	if seq.Length() > 2 {
 		ls := geom.NewLineString(seq)
-		return &ls, nil
+		return &ls
 	}
 
-	return &geom.LineString{}, nil
+	return &geom.LineString{}
 }
 
 // convertContourToPolygons converts the contour to a set of polygons but does NOT convert to different co-ord systems.
@@ -132,19 +132,13 @@ func convertContourToPolygons(c *border.Contour, minPoints int, polygons *[]geom
 	if c.BorderType == border.Outer && len(c.Points) > 0 && (minPoints == 0 || len(c.Points) >= minPoints) {
 
 		lineStrings := []geom.LineString{}
-		outerLS, err := generateLineString(c.Points)
-		if err != nil {
-			return err
-		}
+		outerLS := generateLineString(c.Points)
 		lineStrings = append(lineStrings, *outerLS)
 
 		// holes — skip any with no points, which would otherwise be appended as an empty LineString.
 		for _, child := range c.Children {
 			if !child.ParentCollision && child.Usable && len(child.Points) > 0 {
-				ls, err := generateLineString(child.Points)
-				if err != nil {
-					return err
-				}
+				ls := generateLineString(child.Points)
 				lineStrings = append(lineStrings, *ls)
 			}
 		}

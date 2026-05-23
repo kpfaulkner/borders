@@ -21,7 +21,6 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 	lnbd := 1
 
 	contours := make(map[int]*Contour)
-	done := []bool{false, false, false, false, false, false, false, false}
 
 	contour := NewContour(1)
 	contours[lnbd] = contour
@@ -67,7 +66,7 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 				}
 
 				p0 := image.Point{j, i}
-				border, collectionIndices, err := createBorder(img, p0, from, nbd, done)
+				border, collectionIndices, err := createBorder(img, p0, from, nbd)
 				if err != nil {
 					return nil, err
 				}
@@ -144,7 +143,7 @@ func calcDir(from image.Point, to image.Point) (int, error) {
 // createBorder returns the slice of Points making up the border/contour
 // Also returns list of nbd's that are colliding with this. Can use to help create
 // tree with collision info later.
-func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd int, done []bool) ([]image.Point, map[int]bool, error) {
+func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd int) ([]image.Point, map[int]bool, error) {
 
 	// track which borders have conflicts
 	collisionIndicies := make(map[int]bool)
@@ -180,7 +179,7 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 		}
 		moved = counterClockwise(dir)
 		var p4 image.Point
-		done = []bool{false, false, false, false, false, false, false, false}
+		var done [8]bool
 		for {
 			var ok bool
 			p4, ok = move(p3, img, moved)
