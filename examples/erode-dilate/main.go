@@ -27,7 +27,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
+	fmt.Printf("finding took %d ms\n", time.Since(start).Milliseconds())
 
 	fmt.Printf("contour: %+v\n", cont.Children[0].Points)
 	PrintMemUsage("found contours")

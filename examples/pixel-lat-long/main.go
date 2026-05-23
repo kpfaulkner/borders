@@ -20,7 +20,7 @@ func main() {
 		log.Fatalf("Unable to find contours: %s", err.Error())
 		return
 	}
-	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
+	fmt.Printf("finding took %d ms\n", time.Since(start).Milliseconds())
 
 	// save the contour as an image.
 	border.SaveContourSliceImage("contour.png", cont, img.Width, img.Height, false, 0)
@@ -38,8 +38,11 @@ func main() {
 		log.Fatalf("Unable to convert to simple polygon : %s", err.Error())
 	}
 
-	j, _ := poly.MarshalJSON()
+	j, err := poly.MarshalJSON()
+	if err != nil {
+		log.Fatalf("Unable to marshal poly : %s", err.Error())
+	}
 	os.WriteFile("final.geojson", j, 0644)
 
-	fmt.Printf("convert to polygon took %d ms\n", time.Now().Sub(start).Milliseconds())
+	fmt.Printf("convert to polygon took %d ms\n", time.Since(start).Milliseconds())
 }

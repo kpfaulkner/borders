@@ -156,8 +156,7 @@ func SaveImage(filename string, si *common.SuzukiImage) error {
 //
 // minContourSize indicates if minimum number of points that make up a contour. If contour contains fewer, then
 // do NOT save.
-func SaveContourSliceImage(filename string, c *Contour, width int, height int, flipBook bool, minContourSize int) error {
-
+func SaveContourSliceImage(filename string, c *Contour, width int, height int, flipBook bool, minContourSize int) (err error) {
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{width, height}
 
@@ -180,7 +179,10 @@ func SaveContourSliceImage(filename string, c *Contour, width int, height int, f
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		err = f.Close()
+	}()
+
 	return png.Encode(f, img)
 }
 

@@ -35,7 +35,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf("finding took %d ms\n", time.Now().Sub(start).Milliseconds())
+	fmt.Printf("finding took %d ms\n", time.Since(start).Milliseconds())
 	displayContour(*cont)
 	PrintMemUsage("end")
 }
