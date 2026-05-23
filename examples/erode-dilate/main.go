@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"runtime"
 	"time"
 
 	"github.com/kpfaulkner/borders/border"
-	log "github.com/sirupsen/logrus"
 )
 
 func main() {

@@ -5,7 +5,6 @@ import (
 	"image"
 
 	"github.com/kpfaulkner/borders/common"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -70,7 +69,6 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 				p0 := image.Point{j, i}
 				border, collectionIndices, err := createBorder(img, p0, from, nbd, done)
 				if err != nil {
-					log.Errorf("unable to create border: %s", err.Error())
 					return nil, err
 				}
 
@@ -154,7 +152,6 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 	border := []image.Point{}
 	dir, err := calcDir(p0, p2)
 	if err != nil {
-		log.Errorf("unable to determine direction: %s", err.Error())
 		return nil, nil, err
 	}
 
@@ -179,7 +176,6 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 	for {
 		dir, err = calcDir(p3, p2)
 		if err != nil {
-			log.Errorf("unable to determine direction: %s", err.Error())
 			return nil, nil, err
 		}
 		moved = counterClockwise(dir)

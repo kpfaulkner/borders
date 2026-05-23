@@ -2,9 +2,6 @@ package border
 
 import (
 	"image"
-	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -71,30 +68,3 @@ func (c *Contour) GetAllPoints() []image.Point {
 	return allPoints
 }
 
-// ContourStats generates writes the stats to a log about the contour and all children.
-// Primarily used for debugging
-func ContourStats(c *Contour, offset int) {
-	if len(c.Points) > 0 {
-		pad := strings.Repeat(" ", offset)
-		log.Debugf("%s%d : len %d :  no kids %d : no col %d : col with parent %+v\n", pad, c.Id, len(c.Points), len(c.Children), len(c.ConflictingContours), c.ParentCollision)
-	}
-
-	for _, ch := range c.Children {
-		ContourStats(ch, offset+2)
-	}
-}
-
-// ContourStatsWithCollisions generates writes to stdout stats about the contour and all children that have collisions
-// Primarily used for debugging.
-func ContourStatsWithCollisions(c *Contour, offset int) {
-	if len(c.Points) > 0 {
-		if len(c.ConflictingContours) > 0 {
-			pad := strings.Repeat(" ", offset)
-			log.Debugf("%s%d : len %d :  no kids %d : no col %d : col with parent %+v\n", pad, c.Id, len(c.Points), len(c.Children), len(c.ConflictingContours), c.ParentCollision)
-		}
-	}
-
-	for _, ch := range c.Children {
-		ContourStatsWithCollisions(ch, offset+2)
-	}
-}
