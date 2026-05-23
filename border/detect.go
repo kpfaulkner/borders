@@ -7,11 +7,10 @@ import (
 	"github.com/kpfaulkner/borders/common"
 )
 
-var (
-
-	// dirDelta determines which direction will we move based on the direction (0-7) index
-	dirDelta = []image.Point{{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}}
-)
+// dirDelta determines which direction we move based on the direction (0-7) index.
+// Fixed-size array so the type itself documents the 8-direction invariant and the
+// compiler can prove dirDelta[dir] is in bounds for any `dir` it can range-check.
+var dirDelta = [8]image.Point{{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}}
 
 // FindContours takes a SuzukiImage and determines the Contours that are present.
 // It returns the single parent contour which in turn has all other contours as children or further
@@ -20,10 +19,10 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 	nbd := 1
 	lnbd := 1
 
-	contours := make(map[int]*Contour)
-
-	contour := NewContour(1)
-	contours[lnbd] = contour
+	// contours[id] holds the contour with that id. Contour ids are assigned
+	// sequentially starting at 1, so direct slice indexing replaces a map.
+	// Index 0 is a nil sentinel — no contour ever has id 0.
+	contours := []*Contour{nil, NewContour(1)}
 
 	height := img.Height
 	width := img.Width
@@ -84,7 +83,8 @@ func FindContours(img *common.SuzukiImage) (*Contour, error) {
 				contour.ParentId = parentId
 				contour.Points = border
 				contour.Id = nbd
-				contours[nbd] = contour
+				// nbd was incremented to len(contours), so append lands the new contour at index nbd.
+				contours = append(contours, contour)
 				addCollisionFlag(contour, parentId, contours, collectionIndices)
 			}
 			if fji != 0 && fji != 1 {
@@ -146,7 +146,7 @@ func calcDir(from image.Point, to image.Point) (int, error) {
 func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd int) ([]image.Point, map[int]bool, error) {
 
 	// track which borders have conflicts
-	collisionIndicies := make(map[int]bool)
+	collisionIndices := make(map[int]bool)
 
 	border := []image.Point{}
 	dir, err := calcDir(p0, p2)
@@ -167,7 +167,7 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 	}
 
 	if !foundP1 {
-		return []image.Point{}, collisionIndicies, nil
+		return []image.Point{}, collisionIndices, nil
 	}
 	p2 = p1
 	p3 := p0
@@ -201,8 +201,8 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 			if absNbd < 0 {
 				absNbd *= -1
 			}
-			collisionIndicies[curP3] = true
-			collisionIndicies[absNbd] = true
+			collisionIndices[curP3] = true
+			collisionIndices[absNbd] = true
 		}
 
 		border = append(border, p3)
@@ -220,11 +220,11 @@ func createBorder(img *common.SuzukiImage, p0 image.Point, p2 image.Point, nbd i
 		p3 = p4
 	}
 
-	return border, collisionIndicies, nil
+	return border, collisionIndices, nil
 }
 
 // addCollisionFlag mark contours with collisions with other contours.
-func addCollisionFlag(contour *Contour, parentId int, contours map[int]*Contour, collisionIndices map[int]bool) {
+func addCollisionFlag(contour *Contour, parentId int, contours []*Contour, collisionIndices map[int]bool) {
 	for contour1 := range collisionIndices {
 
 		// quick indicator to say colliding with parent.
